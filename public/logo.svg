@@ -1,0 +1,117 @@
+<svg viewBox="0 0 1200 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+      
+      .neon-text {
+        font-family: 'Orbitron', sans-serif;
+        font-weight: 700;
+        fill: none;
+        stroke: #00d4ff;
+        stroke-width: 2;
+        filter: drop-shadow(0 0 10px #00d4ff) drop-shadow(0 0 20px #0099ff);
+      }
+      
+      .neon-text-sub {
+        font-family: 'Orbitron', sans-serif;
+        font-weight: 700;
+        fill: none;
+        stroke: #00d4ff;
+        stroke-width: 1.5;
+        filter: drop-shadow(0 0 8px #00d4ff);
+      }
+      
+      .gear {
+        fill: none;
+        stroke: #00d4ff;
+        stroke-width: 8;
+        filter: drop-shadow(0 0 10px #00d4ff);
+      }
+      
+      .gear-inner {
+        fill: none;
+        stroke: #0099ff;
+        stroke-width: 4;
+        filter: drop-shadow(0 0 5px #0099ff);
+      }
+      
+      .user-icon {
+        fill: none;
+        stroke: #00d4ff;
+        stroke-width: 6;
+        filter: drop-shadow(0 0 8px #00d4ff);
+      }
+      
+      .circuit-line {
+        stroke: #00d4ff;
+        stroke-width: 3;
+        fill: none;
+        filter: drop-shadow(0 0 5px #00d4ff);
+      }
+      
+      .circuit-dot {
+        fill: #00d4ff;
+        filter: drop-shadow(0 0 8px #00d4ff);
+      }
+    </style>
+  </defs>
+  
+  <!-- Background circuit pattern -->
+  <g opacity="0.1">
+    <line class="circuit-line" x1="0" y1="50" x2="100" y2="50"/>
+    <line class="circuit-line" x1="100" y1="50" x2="100" y2="150"/>
+    <line class="circuit-line" x1="1100" y1="100" x2="1200" y2="100"/>
+    <line class="circuit-line" x1="1100" y1="250" x2="1200" y2="250"/>
+  </g>
+  
+  <!-- Main Gear -->
+  <g transform="translate(120, 140)">
+    <!-- Outer gear teeth -->
+    <circle class="gear" cx="0" cy="0" r="85"/>
+    
+    <!-- Gear teeth pattern -->
+    <g stroke="#00d4ff" stroke-width="8" fill="none" filter="drop-shadow(0 0 10px #00d4ff)">
+      <rect x="-12" y="-100" width="24" height="25" rx="4"/>
+      <rect x="65" y="-65" width="25" height="24" rx="4" transform="rotate(45 77 -53)"/>
+      <rect x="90" y="0" width="25" height="24" rx="4" transform="rotate(90 102 12)"/>
+      <rect x="65" y="65" width="24" height="25" rx="4" transform="rotate(135 77 77)"/>
+      <rect x="-12" y="90" width="24" height="25" rx="4" transform="rotate(180)"/>
+      <rect x="-90" y="65" width="25" height="24" rx="4" transform="rotate(225 -77 77)"/>
+      <rect x="-115" y="0" width="25" height="24" rx="4" transform="rotate(270 -102 12)"/>
+      <rect x="-90" y="-65" width="24" height="25" rx="4" transform="rotate(315 -77 -53)"/>
+    </g>
+    
+    <!-- Inner circle -->
+    <circle class="gear-inner" cx="0" cy="0" r="50"/>
+    
+    <!-- User icon group in center -->
+    <g transform="translate(0, -5)">
+      <!-- Head -->
+      <circle class="user-icon" cx="0" cy="-12" r="8"/>
+      <!-- Body -->
+      <path class="user-icon" d="M -8 -2 Q 0 5 8 -2"/>
+      <!-- Arms -->
+      <line class="user-icon" x1="-15" y1="2" x2="15" y2="2"/>
+    </g>
+  </g>
+  
+  <!-- Horizontal line with circuit elements -->
+  <line class="circuit-line" x1="200" y1="200" x2="1050" y2="200" stroke-width="4"/>
+  
+  <!-- Circuit dots along the line -->
+  <circle class="circuit-dot" cx="350" cy="200" r="6"/>
+  <circle class="circuit-dot" cx="550" cy="200" r="6"/>
+  <circle class="circuit-dot" cx="750" cy="200" r="6"/>
+  <circle class="circuit-dot" cx="950" cy="200" r="6"/>
+  
+  <!-- Main text -->
+  <text class="neon-text" x="270" y="130" font-size="72">FOCUS ENGINEERING</text>
+  
+  <!-- Subtitle text -->
+  <text class="neon-text-sub" x="320" y="240" font-size="56">HRMS SYSTEM</text>
+  
+  <!-- Decorative corner element -->
+  <g transform="translate(1100, 320)" opacity="0.6">
+    <polygon class="circuit-dot" points="0,0 15,-15 30,0 15,15"/>
+  </g>
+</svg>

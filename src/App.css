@@ -1,0 +1,549 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300..900&family=Londrina+Sketch&family=Montserrat:wght@100..900&family=Poppins:wght@700&family=Roboto:wght@100..900&family=Silkscreen:wght@400;700&display=swap');
+@import './theme.css';
+
+/* === Font Variables === */
+:root {
+  --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Poppins', sans-serif;
+
+  /* Primary Brand Colors (Matches Login) */
+  --primary-color: #4f46e5;
+  --primary-hover: #4338ca;
+  --secondary-color: #8b5cf6;
+
+  /* Light Theme Variables */
+  --bg-main: #f3f4f6;
+  /* Slate 100 - cleaner gray */
+  --bg-sidebar: #ffffff;
+  /* White Sidebar for Light Mode */
+  --bg-sidebar-hover: #f1f5f9;
+  /* Slate 100 */
+  --bg-sidebar-active: #e2e8f0;
+  /* Slate 200 */
+
+  --text-main: #1f2937;
+  /* Gray 800 */
+  --text-sidebar: #334155;
+  /* Slate 700 for Sidebar text */
+  --text-sidebar-active: #0f172a;
+  /* Slate 900 */
+
+  --logout-bg: #ef4444;
+  --logout-hover: #dc2626;
+
+  --card-bg: #ffffff;
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+
+[data-theme='dark'] {
+  /* Dark Theme Variables */
+  --bg-main: #0f172a;
+  /* Slate 900 */
+  --bg-sidebar: #020617;
+  /* Slate 950 */
+  --bg-sidebar-hover: #1e293b;
+  --bg-sidebar-active: #3730a3;
+  /* Indigo 800 */
+
+  --text-main: #ffffff;
+  --text-sidebar: #ffffff;
+  --text-sidebar-active: #ffffff;
+
+  --logout-bg: #991b1b;
+  --logout-hover: #7f1d1d;
+
+  --card-bg: #1e293b;
+  /* Slate 800 */
+  --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* === Base Reset === */
+body {
+  font-family: var(--font-main);
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+#root {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* === Sidebar === */
+.sidebar {
+  width: 0;
+  /* Closed state: 0 width */
+  flex-shrink: 0;
+  background-color: var(--bg-sidebar);
+  color: var(--text-sidebar);
+  height: 100vh;
+  /* Remove fixed/absolute positioning to participate in Flexbox layout */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 0;
+  /* Hide content when width is small */
+  overflow-x: hidden;
+  overflow-y: auto;
+  white-space: nowrap;
+  /* Prevent text wrapping during transition */
+  transition: width 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), background-color 0.3s ease;
+  z-index: 100;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar.sidebar-open {
+  width: 260px;
+  /* Open state: full width */
+}
+
+/* Ensure padding doesn't keep it visible when closed if width is 0 */
+/* The padding is 1rem 0 (vertical), so horizontal is 0, which is good. */
+
+/* Hamburger Button Container - Fixed Position */
+/* Invisible Hover Switch Strip */
+.sidebar-trigger-area {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 20px;
+  /* Width of the active hover area */
+  height: 100vh;
+  z-index: 1060;
+  /* Above sidebar to catch hover if needed, but below open sidebar */
+  cursor: pointer;
+  background-color: transparent;
+  /* Invisible */
+  /* Debugging: background-color: rgba(255, 0, 0, 0.2); */
+  display: block;
+}
+
+/* When sidebar is open, hide the trigger so it doesn't interfere */
+.sidebar-trigger-hidden {
+  display: none;
+  pointer-events: none;
+}
+
+.logo-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
+  padding: 0 1rem;
+}
+
+.logo {
+  width: 100%;
+  max-width: 180px;
+  height: auto;
+  object-fit: contain;
+  transition: filter 0.3s ease;
+}
+
+/* Invert Logo for Light Mode (assuming original logo is white/light) 
+   OR if original is dark, we might need different logic.
+   Let's assume standard behavior: Logo.png is likely the colored/dark one?
+   Actually, looking at previous sidebar CSS (--bg-sidebar: #1e1b4b), the old logo worked on Dark.
+   So the logo is likely Light/White. 
+   So on new Light Sidebar (#ffffff), we need to Turn it Dark.
+*/
+[data-theme='light'] .logo {
+  filter: none;
+}
+
+.theme-toggle-container {
+  position: fixed;
+  top: 15px;
+  right: 20px;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-card);
+  padding: 8px 15px;
+  border-radius: 40px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--border-color);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(10px);
+  opacity: 0.8;
+}
+
+.theme-toggle-container:hover {
+  transform: translateY(-5px) scale(1.05);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+  opacity: 1;
+}
+
+/* === Global Header === */
+.global-header {
+  height: 60px;
+  width: 100%;
+  position: sticky;
+  top: 0;
+  background: var(--bg-card);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  z-index: 1000;
+  border-bottom: 1px solid var(--border-color);
+  backdrop-filter: blur(10px);
+  opacity: 0.98;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+/* Adjusted for sidebar. If sidebar is usually open or taking space, we might need a margin.
+   But current sidebar is fixed or floating trigger. */
+
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+.header-brand-logo {
+  max-height: 40px;
+  width: auto;
+  object-fit: contain;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.top-theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  border-radius: 20px;
+  background: var(--bg-main);
+  border: 1px solid var(--border-color);
+}
+
+.theme-switch {
+  position: relative;
+  display: inline-block;
+  width: 46px;
+  height: 24px;
+}
+
+.theme-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #cbd5e1;
+  transition: .4s;
+  border-radius: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 5px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+  z-index: 2;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+input:checked+.slider {
+  background-color: #4f46e5;
+}
+
+input:focus+.slider {
+  box-shadow: 0 0 1px #4f46e5;
+}
+
+input:checked+.slider:before {
+  transform: translateX(22px);
+}
+
+.slider i {
+  font-size: 12px;
+  color: #64748b;
+  transition: all 0.3s;
+}
+
+input:checked+.slider .bi-sun-fill {
+  color: #fff;
+}
+
+input:checked+.slider .bi-moon-fill {
+  color: transparent;
+}
+
+[data-theme='dark'] .theme-toggle-container {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--text-sidebar);
+}
+
+.user-name {
+  font-weight: bold;
+  font-size: 0.95rem;
+  color: var(--text-sidebar);
+}
+
+.user-role {
+  font-size: 0.75rem;
+  color: var(--text-sidebar);
+  opacity: 0.8;
+}
+
+.nav-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  cursor: pointer;
+  font-size: 1rem;
+  /* Slightly smaller for better fit */
+  transition: background-color 0.2s ease;
+  color: var(--text-sidebar);
+  margin-bottom: 8px;
+  white-space: nowrap;
+  /* Prevent text wrap */
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nav-item .icon svg {
+  color: var(--text-sidebar);
+  transition: color 0.3s ease;
+}
+
+.nav-item:hover {
+  background-color: var(--bg-sidebar-hover);
+}
+
+/* === Active Nav Item === */
+.nav-item.active {
+  background-color: var(--bg-sidebar-active);
+  border-left: 4px solid #5d5bd7;
+  font-weight: 600;
+  color: var(--text-sidebar-active);
+}
+
+.nav-item.active span {
+  color: var(--text-sidebar-active);
+}
+
+.nav-item.active .icon svg {
+  color: var(--text-sidebar-active);
+}
+
+/* Sidebar Footer */
+.sidebar-footer {
+  margin-top: auto;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.logout-btn,
+.theme-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.2s ease;
+}
+
+.logout-btn {
+  background-color: var(--logout-bg);
+  color: white;
+}
+
+.logout-btn:hover {
+  background-color: var(--logout-hover);
+}
+
+.theme-btn {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--text-sidebar);
+}
+
+.theme-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.logout-btn svg,
+.theme-btn svg {
+  font-size: 1.1rem;
+}
+
+/* === Event Page New Styling === */
+
+.event-wrapper {
+  width: 100%;
+  max-width: 700px;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.main-content {
+  flex: 1;
+  padding: 2rem;
+  background-color: var(--bg-main);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.event-header {
+  text-align: center;
+  padding: 1rem 2rem;
+}
+
+.event-profile {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 1rem;
+
+}
+
+.event-heading {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.event-subtext {
+  font-size: 0.95rem;
+  color: #6c757d;
+}
+
+/* Card Box Styling */
+.event-card-box {
+  background-color: var(--card-bg);
+  padding: 2rem;
+  width: 100%;
+  max-width: 600px;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+.event-title {
+  font-size: 1.3rem;
+  font-weight: bold;
+  margin-bottom: 1.5rem;
+  color: var(--text-main);
+}
+
+.event-card-box p {
+  font-size: 1rem;
+  color: var(--text-main);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.event-card-box i {
+  color: var(--text-main);
+}
+
+/* === Dashboard Widgets === */
+.icon-shape {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+}
+
+.bg-light-primary {
+  background-color: rgba(13, 110, 253, 0.1);
+  color: #0d6efd;
+}
+
+.bg-light-success {
+  background-color: rgba(25, 135, 84, 0.1);
+  color: #198754;
+}
+
+.bg-light-warning {
+  background-color: rgba(255, 193, 7, 0.1);
+  color: #ffc107;
+}
+
+.bg-light-info {
+  background-color: rgba(13, 202, 240, 0.1);
+  color: #0dcaf0;
+}
+
+.fs-4 {
+  font-size: 1.5rem !important;
+}
+
+.fs-6 {
+  font-size: 1rem !important;
+}
+
+
+/* Dark Mode Overrides managed by theme.css via [data-theme='dark'] */

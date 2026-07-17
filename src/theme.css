@@ -1,0 +1,474 @@
+/* === GLOSSY GLASS THEME SYSTEM === */
+
+:root {
+  /* --- LIGHT MODE VARIABLES --- */
+
+  /* Backgrounds */
+  --bg-main: #f0f4f8;
+  /* Soft cloud white */
+  --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+
+  /* Text */
+  --text-main: #1f2937;
+  --text-muted: #6b7280;
+  --text-inverse: #ffffff;
+
+  /* Glass Effects (Light) */
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.5);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+  --glass-blur: blur(12px);
+
+  /* Brand Colors (Gradients) - Enhanced for clarity */
+  --primary-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  --secondary-gradient: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+  --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --danger-gradient: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+  --warning-gradient: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  --info-gradient: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+
+  /* Button Colors (Solid Fallbacks or Gradient bases) */
+  --btn-text-color: #ffffff;
+}
+
+[data-theme='dark'] {
+  /* --- DARK MODE VARIABLES --- */
+
+  /* Backgrounds */
+  --bg-main: #0f172a;
+  /* Slate 900 */
+  --bg-gradient: linear-gradient(135deg, #020617 0%, #1e293b 100%);
+  /* Darker & Richer */
+
+  /* Text - High Contrast */
+  --text-main: #ffffff;
+  /* Pure White */
+  --text-muted: #cbd5e1;
+  /* Light Slate */
+  --text-inverse: #000000;
+
+  /* Glass Effects (Dark) - increased opacity for legibility */
+  --glass-bg: rgba(30, 41, 59, 0.85);
+  /* Slightly more opaque */
+  --glass-border: 1px solid rgba(255, 255, 255, 0.15);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+
+  /* Adjust Gradients for Dark Mode luminosity if needed */
+  /* Keeping same gradients usually works for "pop", but borders might need tweaking */
+}
+
+/* === REACT CALENDAR DARK MODE & GLOSSY OVERRIDES === */
+.react-calendar {
+  background: var(--glass-bg) !important;
+  border: var(--glass-border) !important;
+  border-radius: 16px;
+  font-family: inherit !important;
+  box-shadow: var(--glass-shadow);
+  width: 100% !important;
+  color: var(--text-main) !important;
+  backdrop-filter: blur(12px);
+}
+
+[data-theme='dark'] .react-calendar__tile:enabled:hover,
+[data-theme='dark'] .react-calendar__tile:enabled:focus {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border-radius: 8px;
+}
+
+[data-theme='dark'] .react-calendar__tile--now {
+  background: rgba(59, 130, 246, 0.3) !important;
+  border-radius: 8px;
+}
+
+[data-theme='dark'] .react-calendar__tile--active {
+  background: var(--primary-gradient) !important;
+  color: white !important;
+  border-radius: 8px;
+}
+
+[data-theme='dark'] .react-calendar__navigation button {
+  color: white !important;
+}
+
+[data-theme='dark'] .react-calendar__navigation button:enabled:hover,
+[data-theme='dark'] .react-calendar__navigation button:enabled:focus {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px;
+}
+
+[data-theme='dark'] .react-calendar__month-view__days__day--weekend {
+  color: #f87171 !important;
+  /* Light Red */
+}
+
+[data-theme='dark'] .react-calendar__month-view__weekdays__weekday {
+  color: #cbd5e1;
+  /* Light Gray for weekdays header */
+  text-decoration: none !important;
+}
+
+/* Light Mode Calibration */
+[data-theme='light'] .react-calendar {
+  background: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* === DARK MODE TEXT OVERRIDES === */
+[data-theme='dark'] .text-primary {
+  color: #60a5fa !important;
+  /* Lighter Blue */
+}
+
+[data-theme='dark'] .text-secondary {
+  color: #94a3b8 !important;
+  /* Lighter Gray */
+}
+
+[data-theme='dark'] .text-success {
+  color: #4ade80 !important;
+  /* Bright Green */
+}
+
+[data-theme='dark'] .text-danger {
+  color: #f87171 !important;
+  /* Bright Red */
+}
+
+[data-theme='dark'] .text-warning {
+  color: #fbbf24 !important;
+  /* Bright Amber */
+}
+
+[data-theme='dark'] .text-info {
+  color: #38bdf8 !important;
+  /* Bright Sky */
+}
+
+[data-theme='dark'] .text-muted {
+  color: #cbd5e1 !important;
+  /* Readable Gray */
+}
+
+[data-theme='dark'] .text-dark {
+  color: #f1f5f9 !important;
+  /* Invert 'text-dark' to be light in dark mode */
+}
+
+
+/* === GLOBAL RESETS & BASE === */
+body {
+  background: var(--bg-gradient);
+  background-attachment: fixed;
+  color: var(--text-main) !important;
+  /* Override Bootstrap default */
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.h1,
+.h2,
+.h3,
+.h4,
+.h5,
+.h6 {
+  color: var(--text-main) !important;
+}
+
+p,
+span,
+div,
+label,
+small,
+li {
+  /* Ensure these inherit or use text-main unless overridden */
+  /* We don't force all to avoid breaking specific colored text,
+     but we should handle standard text */
+  color: inherit;
+}
+
+/* Force specific dashboard elements if they are stubborn */
+[data-theme='dark'] .card-title,
+[data-theme='dark'] .display-4,
+[data-theme='dark'] .lead,
+[data-theme='dark'] label,
+[data-theme='dark'] .card-body,
+[data-theme='dark'] .form-label,
+[data-theme='dark'] .input-group-text {
+  color: #ffffff !important;
+}
+
+/* Ensure inputs themselves have light text in dark mode */
+[data-theme='dark'] input,
+[data-theme='dark'] select,
+[data-theme='dark'] textarea {
+  color: #ffffff !important;
+}
+
+/* === GLOSSY CARD UTILITY === */
+.card,
+.glass-card {
+  background: var(--glass-bg) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  -webkit-backdrop-filter: var(--glass-blur) !important;
+  border: var(--glass-border) !important;
+  box-shadow: var(--glass-shadow) !important;
+  border-radius: 16px !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  color: var(--text-main);
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.15) !important;
+}
+
+/* === GLOSSY BUTTONS === */
+.btn-glossy {
+  background: var(--primary-gradient) !important;
+  color: white !important;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.btn-glossy:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+  transform: translateY(-2px);
+}
+
+/* Base Button Style */
+/* Base Button Style */
+.btn {
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 10px 20px !important;
+  font-weight: 600 !important;
+  transition: all 0.3s ease !important;
+  backdrop-filter: blur(4px);
+  position: relative;
+  overflow: hidden;
+  color: white !important;
+  /* Most glossy buttons have white text */
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+  filter: brightness(1.1);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+/* Glossy Shine Effect */
+.btn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: 0.5s;
+}
+
+.btn:hover::after {
+  left: 100%;
+}
+
+/* Variants */
+.btn-primary {
+  background: var(--primary-gradient) !important;
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, #6c757d 0%, #495057 100%) !important;
+}
+
+.btn-success {
+  background: var(--success-gradient) !important;
+  color: white !important;
+}
+
+.btn-danger {
+  background: var(--danger-gradient) !important;
+  color: white !important;
+}
+
+.btn-warning {
+  background: var(--warning-gradient) !important;
+  color: white !important;
+}
+
+.btn-info {
+  background: var(--info-gradient) !important;
+  color: white !important;
+}
+
+.btn-light {
+  background: rgba(255, 255, 255, 0.8) !important;
+  color: #333 !important;
+}
+
+.btn-dark {
+  background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%) !important;
+  color: white !important;
+}
+
+/* Outline Buttons - Glassy Border Style */
+.btn-outline-primary {
+  background: transparent !important;
+  border: 2px solid #667eea !important;
+  color: #667eea !important;
+  box-shadow: none;
+}
+
+.btn-outline-primary:hover {
+  background: var(--primary-gradient) !important;
+  border-color: transparent !important;
+  color: white !important;
+}
+
+/* === FORMS & INPUTS === */
+.form-control,
+.form-select {
+  background: var(--glass-bg) !important;
+  border: var(--glass-border) !important;
+  color: var(--text-main) !important;
+  border-radius: 12px !important;
+  backdrop-filter: blur(10px);
+}
+
+.form-control:focus,
+.form-select:focus {
+  background: rgba(255, 255, 255, 0.9) !important;
+  /* More opaque on focus */
+  border-color: #764ba2 !important;
+  box-shadow: 0 0 0 4px rgba(118, 75, 162, 0.1) !important;
+}
+
+[data-theme='dark'] .form-control:focus {
+  background: rgba(30, 41, 59, 0.9) !important;
+}
+
+/* Placeholder color for dark mode */
+[data-theme='dark'] ::placeholder {
+  color: #6b7280;
+}
+
+/* === TABLES === */
+.table {
+  color: var(--text-main) !important;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.table th {
+  background: rgba(0, 0, 0, 0.02) !important;
+  /* Slight tint */
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.table td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  vertical-align: middle;
+}
+
+[data-theme='dark'] .table th {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* === BADGES === */
+.badge {
+  padding: 8px 12px !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.3px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+/* Glossy Badges */
+.bg-primary {
+  background: var(--primary-gradient) !important;
+  color: white !important;
+}
+
+.bg-success {
+  background: var(--success-gradient) !important;
+  color: #1a4731 !important;
+}
+
+.bg-danger {
+  background: var(--danger-gradient) !important;
+  color: #5c1e2b !important;
+}
+
+.bg-warning {
+  background: var(--warning-gradient) !important;
+  color: #5c3c00 !important;
+}
+
+.bg-info {
+  background: var(--info-gradient) !important;
+  color: #003e5c !important;
+}
+
+/* === NAVIGATION / SIDEBAR === */
+.sidebar {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  border-right: var(--glass-border);
+}
+
+/* === STATUS INDICATORS === */
+.status-indicator-pulse {
+  background: #84fab0;
+  box-shadow: 0 0 0 rgba(132, 250, 176, 0.4);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(132, 250, 176, 0.7);
+  }
+
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 10px rgba(132, 250, 176, 0);
+  }
+
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(132, 250, 176, 0);
+  }
+}
+
+/* === SCROLLBARS === */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.5);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(107, 114, 128, 0.8);
+}
