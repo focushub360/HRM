@@ -100,7 +100,7 @@ The app has **3 portals** on the login screen. Use the credentials below for eac
 | Field | Value |
 |-------|-------|
 | **Email** | `admin@focus.com` |
-| **Password** | `Focus@123` |
+| **Password** | `********` |
 | **Name** | Admin User |
 
 ---
@@ -110,7 +110,7 @@ The app has **3 portals** on the login screen. Use the credentials below for eac
 | Field | Value |
 |-------|-------|
 | **Email** | `raj.kumar@techsolutions.com` |
-| **Password** | `Secure@123` |
+| **Password** | `********` |
 | **Name** | Raj Kumar |
 | **Emp ID** | `HR-TSI-001` |
 | **Company** | Tech Solutions India |
@@ -121,9 +121,9 @@ The app has **3 portals** on the login screen. Use the credentials below for eac
 
 | # | Name | Email | Password | Emp ID | Department |
 |---|------|-------|----------|--------|------------|
-| 1 | Alice Johnson | `alice@techsolutions.com` | `password` | `EMP-TSI-001` | Sales |
-| 2 | Bob Smith | `bob@techsolutions.com` | `password` | `EMP-TSI-002` | Engineering |
-| 3 | Charlie Brown | `charlie@techsolutions.com` | `password` | `EMP-TSI-003` | Marketing |
+| 1 | Alice Johnson | `alice@techsolutions.com` | `********` | `EMP-TSI-001` | Sales |
+| 2 | Bob Smith | `bob@techsolutions.com` | `********` | `EMP-TSI-002` | Engineering |
+| 3 | Charlie Brown | `charlie@techsolutions.com` | `********` | `EMP-TSI-003` | Marketing |
 
 > 💡 Run `node backend/seed_firestore.js` to seed the database with the above default accounts.
 
@@ -149,13 +149,13 @@ VITE_SOCKET_URL=https://hrms-backend-22uq.onrender.com
 **File: `src/firebase.js`**
 ```js
 const firebaseConfig = {
-    apiKey:            "AIzaSyDBRe7aaOZHsOv9K3bDv2QjhLgUdlPxsOA",
-    authDomain:        "pic-gen-6bc8d.firebaseapp.com",
-    projectId:         "pic-gen-6bc8d",
-    storageBucket:     "pic-gen-6bc8d.firebasestorage.app",
-    messagingSenderId: "788766460578",
-    appId:             "1:788766460578:web:498f1cd47baf7fe3b325fb",
-    measurementId:     "G-HH65D8KXEB"
+    apiKey:            "<YOUR_API_KEY>",
+    authDomain:        "<YOUR_AUTH_DOMAIN>",
+    projectId:         "<YOUR_PROJECT_ID>",
+    storageBucket:     "<YOUR_STORAGE_BUCKET>",
+    messagingSenderId: "<YOUR_MESSAGING_SENDER_ID>",
+    appId:             "<YOUR_APP_ID>",
+    measurementId:     "<YOUR_MEASUREMENT_ID>"
 };
 ```
 
@@ -168,10 +168,10 @@ const firebaseConfig = {
 | Field | Value |
 |-------|-------|
 | `type` | `service_account` |
-| `project_id` | `pic-gen-6bc8d` |
-| `private_key_id` | `703143b88f707e9f313cea9ac8c9153b1a27ea3c` |
-| `client_email` | `firebase-adminsdk-fbsvc@pic-gen-6bc8d.iam.gserviceaccount.com` |
-| `client_id` | `115976971177547653924` |
+| `project_id` | `<YOUR_PROJECT_ID>` |
+| `private_key_id` | `<YOUR_PRIVATE_KEY_ID>` |
+| `client_email` | `<YOUR_CLIENT_EMAIL>` |
+| `client_id` | `<YOUR_CLIENT_ID>` |
 | `auth_uri` | `https://accounts.google.com/o/oauth2/auth` |
 | `token_uri` | `https://oauth2.googleapis.com/token` |
 
@@ -183,9 +183,9 @@ const firebaseConfig = {
 
 | Property | Value |
 |----------|-------|
-| **Project ID** | `pic-gen-6bc8d` |
-| **Firebase Console** | [https://console.firebase.google.com/project/pic-gen-6bc8d](https://console.firebase.google.com/project/pic-gen-6bc8d) |
-| **Storage Bucket** | `pic-gen-6bc8d.firebasestorage.app` |
+| **Project ID** | `<YOUR_PROJECT_ID>` |
+| **Firebase Console** | [https://console.firebase.google.com/project/<YOUR_PROJECT_ID>](https://console.firebase.google.com/project/<YOUR_PROJECT_ID>) |
+| **Storage Bucket** | `<YOUR_PROJECT_ID>.firebasestorage.app` |
 | **Firestore DB** | Enabled (default region) |
 | **Firebase Auth** | Enabled |
 
