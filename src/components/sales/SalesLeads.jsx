@@ -13,7 +13,7 @@ const SalesLeads = () => {
     useEffect(() => {
         fetchLeads(true);
 
-        const socket = io('http://localhost:5000');
+        const socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000');
         socket.emit('join-company-room', user.companyId);
 
         socket.on('lead-added', (newLead) => {
@@ -36,7 +36,7 @@ const SalesLeads = () => {
     const fetchLeads = async (showLoader = false) => {
         if (showLoader) setLoading(true);
         try {
-            const response = await fetch(`http://localhost:5000/api/leads/${user.companyId}`);
+            const response = await fetch(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}`}'}/leads/${user.companyId}`);
             if (response.ok) {
                 const data = await response.json();
                 setLeads(data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
@@ -50,7 +50,7 @@ const SalesLeads = () => {
 
     const updateLeadData = async (id, data) => {
         try {
-            const response = await fetch(`http://localhost:5000/api/leads/${id}`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}`}'}/leads/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)

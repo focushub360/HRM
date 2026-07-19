@@ -210,11 +210,11 @@ const Profile = () => {
             let method = "PUT";
 
             if (user.type === 'hr') {
-                endpoint = `http://localhost:5000/api/companies/${user.companyId}/hr/${user.id}`;
+                endpoint = `${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}`}'}/companies/${user.companyId}/hr/${user.id}`;
             } else if (user.type === 'company' || user.role === 'admin') {
-                endpoint = `http://localhost:5000/api/companies/${user.companyId}/admin`;
+                endpoint = `${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}`}'}/companies/${user.companyId}/admin`;
             } else {
-                endpoint = `http://localhost:5000/api/companies/${user.companyId}/employees/${user.id}`;
+                endpoint = `${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}`}'}/companies/${user.companyId}/employees/${user.id}`;
             }
 
             const response = await fetch(endpoint, {
