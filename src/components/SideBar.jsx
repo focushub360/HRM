@@ -25,7 +25,7 @@ import { useTheme } from "../context/ThemeContext.jsx";
 import { MdSpaceDashboard } from "react-icons/md";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
-import logo from "../assets/login_logo.png";
+import logo from "../assets/Logo.png";
 import userImg from "../assets/client.jpg";
 import "/src/App.css";
 

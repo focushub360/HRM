@@ -6,7 +6,7 @@ import Login from "./components/Login";
 import { useAuth } from "./context/AuthContext.jsx";
 import "/src/App.css";
 import "bootstrap/dist/css/bootstrap.min.css";
-import loginLogo from "./assets/login_logo.png";
+import loginLogo from "./assets/Logo.png";
 
 // Shared/Common Components
 import Event2 from "./components/Events2";

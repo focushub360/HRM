@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import FaceCaptureModal from './employee/FaceCaptureModal.jsx';
 import './Auth.css';
-import loginLogo from '../assets/login_logo.png';
+import loginLogo from '../assets/Logo.png';
 import {
   BiUser,
   BiBuilding,
