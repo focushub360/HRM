@@ -34,14 +34,14 @@ const SalesTasks = () => {
 
     const fetchTasks = async () => {
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}`}'}/tasks/${user.companyId}`);
+            const response = await fetch(`http://localhost:5000/api/tasks/${user.companyId}`);
             if (response.ok) setTasks(await response.json());
         } catch (error) { console.error(error); } finally { setLoading(false); }
     };
 
     const fetchEmployees = async () => {
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}`}'}/companies/${user.companyId}/employees`);
+            const response = await fetch(`http://localhost:5000/api/companies/${user.companyId}/employees`);
             if (response.ok) {
                 const allEmployees = await response.json();
                 // Only show Sales Team in the assignment list
@@ -57,7 +57,7 @@ const SalesTasks = () => {
             return;
         }
         try {
-            await fetch(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}`}/tasks', {
+            await fetch('http://localhost:5000/api/tasks', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -90,7 +90,7 @@ const SalesTasks = () => {
             setSelectedTask(updatedTask);
             setTasks(prev => prev.map(t => t.id === selectedTask.id ? updatedTask : t));
 
-            await fetch(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}`}'}/tasks/${selectedTask.id}`, {
+            await fetch(`http://localhost:5000/api/tasks/${selectedTask.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ messages: updatedMessages })

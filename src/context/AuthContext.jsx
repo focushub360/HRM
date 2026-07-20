@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
 const AuthContext = createContext();
-import { API_URL } from '../config.js';
+const API_URL = 'http://127.0.0.1:5000/api';
 
 export const AuthProvider = ({ children }) => {
   // Initialize state from sessionStorage if available (Session only)

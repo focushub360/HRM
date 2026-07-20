@@ -18,7 +18,7 @@ const Feed = () => {
 
   const fetchCompanies = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}`}/companies");
+      const response = await fetch("http://localhost:5000/api/companies");
       if (response.ok) {
         const data = await response.json();
         setCompanies(data);
@@ -34,7 +34,7 @@ const Feed = () => {
     if (!user?.companyId) return;
     try {
       // feedType now holds the explicit company ID or 'global'
-      const response = await fetch(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}`}'}/feed/${feedType}`);
+      const response = await fetch(`http://localhost:5000/api/feed/${feedType}`);
       if (response.ok) {
         const data = await response.json();
         setPosts(data);
@@ -61,7 +61,7 @@ const Feed = () => {
     };
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}`}/feed", {
+      const response = await fetch("http://localhost:5000/api/feed", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(postData),
@@ -80,7 +80,7 @@ const Feed = () => {
 
   const handleLike = async (postId) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}`}'}/feed/${postId}/like`, {
+      const response = await fetch(`http://localhost:5000/api/feed/${postId}/like`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: user.empId || user.email }),
@@ -108,7 +108,7 @@ const Feed = () => {
     };
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}`}'}/feed/${postId}/comment`, {
+      const response = await fetch(`http://localhost:5000/api/feed/${postId}/comment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(commentData),
@@ -133,7 +133,7 @@ const Feed = () => {
     if (!window.confirm("Are you sure you want to delete this post?")) return;
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}`}'}/feed/${postId}`, {
+      const response = await fetch(`http://localhost:5000/api/feed/${postId}`, {
         method: "DELETE",
       });
 

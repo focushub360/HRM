@@ -14,7 +14,7 @@ const TASK_STATUS = {
     'Completed':   { color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
 };
 
-const API = `${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}`}';
+const API = 'http://localhost:5000/api';
 
 // ─── Avatar ──────────────────────────────────────────────────────────────────
 const Avatar = ({ name = '', size = 36, color = '#4f46e5' }) => {

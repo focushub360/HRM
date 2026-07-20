@@ -27,7 +27,7 @@ const SalesManagement = () => {
         if (salesTeam.length === 0) setLoading(true); // Only show loader on first load to prevent flickering
         try {
             // 1. Fetch Employees
-            const empRes = await fetch(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}`}'}/companies/${user.companyId}/employees`);
+            const empRes = await fetch(`http://127.0.0.1:5000/api/companies/${user.companyId}/employees`);
             if (!empRes.ok) throw new Error("Failed to fetch employees");
             const allEmps = await empRes.json();
 
