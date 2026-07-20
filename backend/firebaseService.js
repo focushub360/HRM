@@ -7,15 +7,23 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Import service account key
-// Note: In production, consider using environment variables to store path or content
-const serviceAccountPath = path.join(__dirname, 'serviceAccountKey.json');
+let serviceAccount;
 
-if (!fs.existsSync(serviceAccountPath)) {
-    console.error("CRITICAL ERROR: serviceAccountKey.json not found in backend directory.");
-    process.exit(1);
+if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    try {
+        serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    } catch (e) {
+        console.error("CRITICAL ERROR: Invalid JSON in FIREBASE_SERVICE_ACCOUNT environment variable.");
+        process.exit(1);
+    }
+} else {
+    const serviceAccountPath = process.env.SERVICE_ACCOUNT_PATH || path.join(__dirname, 'serviceAccountKey.json');
+    if (!fs.existsSync(serviceAccountPath)) {
+        console.error("CRITICAL ERROR: serviceAccountKey.json not found in backend directory.");
+        process.exit(1);
+    }
+    serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
 }
-
-const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
 
 // Initialize Firebase Admin
 if (!admin.apps.length) {
