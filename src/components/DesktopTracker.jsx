@@ -11,7 +11,7 @@ const DesktopTracker = () => {
     const [sessionStats, setSessionStats] = useState({});
 
     useEffect(() => {
-        const newSocket = io(import.meta.env.VITE_SOCKET_URL || 'https://hrms-backend-22uq.onrender.com');
+        const newSocket = io(import.meta.env.VITE_SOCKET_URL || (import.meta.env.DEV ? 'http://localhost:5000' : 'https://hrms-backend-22uq.onrender.com'));
         setSocket(newSocket);
 
         if (user) {

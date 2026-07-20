@@ -72,7 +72,7 @@ const Settings = () => {
 
     const fetchCredentials = async () => {
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://hrms-backend-22uq.onrender.com/api'}/companies/${selectedCompanyId}/credentials`);
+            const res = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://hrms-backend-22uq.onrender.com/api')}/companies/${selectedCompanyId}/credentials`);
             if (res.ok) {
                 const data = await res.json();
                 setCredentials(data);
@@ -90,7 +90,7 @@ const Settings = () => {
         try {
             if (user.type === 'company' || user.type === 'company_admin') {
                 // Update Selected Company Data via server endpoint
-                const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://hrms-backend-22uq.onrender.com/api'}/companies/${selectedCompanyId}/settings`, {
+                const response = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://hrms-backend-22uq.onrender.com/api')}/companies/${selectedCompanyId}/settings`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

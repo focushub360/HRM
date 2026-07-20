@@ -210,11 +210,11 @@ const Profile = () => {
             let method = "PUT";
 
             if (user.type === 'hr') {
-                endpoint = `${import.meta.env.VITE_API_URL || 'https://hrms-backend-22uq.onrender.com/api'}/companies/${user.companyId}/hr/${user.id}`;
+                endpoint = `${import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://hrms-backend-22uq.onrender.com/api')}/companies/${user.companyId}/hr/${user.id}`;
             } else if (user.type === 'company' || user.role === 'admin') {
-                endpoint = `${import.meta.env.VITE_API_URL || 'https://hrms-backend-22uq.onrender.com/api'}/companies/${user.companyId}/admin`;
+                endpoint = `${import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://hrms-backend-22uq.onrender.com/api')}/companies/${user.companyId}/admin`;
             } else {
-                endpoint = `${import.meta.env.VITE_API_URL || 'https://hrms-backend-22uq.onrender.com/api'}/companies/${user.companyId}/employees/${user.id}`;
+                endpoint = `${import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://hrms-backend-22uq.onrender.com/api')}/companies/${user.companyId}/employees/${user.id}`;
             }
 
             const response = await fetch(endpoint, {
