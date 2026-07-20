@@ -17,7 +17,7 @@ const LiveTracking = () => {
             // I will assume Company Admin sees all, but HR sees only theirs.
             // Actually user said "hr who is creating ... are head ... other hr cannt".
             // If I am 'hr', I filter.
-            let url = `http://localhost:5000/api/companies/${user.companyId}/employees`;
+            let url = `${import.meta.env.VITE_API_URL || 'https://hrms-backend-22uq.onrender.com/api'}/companies/${user.companyId}/employees`;
             if (user.type === 'hr') {
                 url += `?hrId=${user.id}`;
             }
@@ -41,7 +41,7 @@ const LiveTracking = () => {
     }, [user]);
 
     useEffect(() => {
-        const newSocket = io('http://localhost:5000');
+        const newSocket = io(import.meta.env.VITE_SOCKET_URL || 'https://hrms-backend-22uq.onrender.com');
         setSocket(newSocket);
 
         // Join company room

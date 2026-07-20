@@ -28,7 +28,7 @@ const SalesVisits = () => {
 
     // Socket.io for Real-time Updates
     useEffect(() => {
-        const socket = io('http://localhost:5000');
+        const socket = io(import.meta.env.VITE_SOCKET_URL || 'https://hrms-backend-22uq.onrender.com');
 
         socket.emit('join-company-room', user.companyId);
 
@@ -79,7 +79,7 @@ const SalesVisits = () => {
     const fetchStats = async () => {
         if (!selectedEmployee) return;
         try {
-            const res = await fetch(`http://127.0.0.1:5000/api/gps/stats/${selectedEmployee}?date=${selectedDate}`);
+            const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://hrms-backend-22uq.onrender.com/api'}/gps/stats/${selectedEmployee}?date=${selectedDate}`);
             if (res.ok) {
                 const data = await res.json();
                 setTotalDistance(data.totalDistance || 0);
@@ -89,7 +89,7 @@ const SalesVisits = () => {
 
     const fetchEmployees = async () => {
         try {
-            const res = await fetch(`http://127.0.0.1:5000/api/companies/${user.companyId}/employees`);
+            const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://hrms-backend-22uq.onrender.com/api'}/companies/${user.companyId}/employees`);
             if (res.ok) setEmployees(await res.json());
         } catch (e) { console.error(e); }
     };
@@ -97,7 +97,7 @@ const SalesVisits = () => {
     const fetchVisits = async (showLoader = false) => {
         if (showLoader) setLoading(true);
         try {
-            let url = `http://127.0.0.1:5000/api/visits/${user.companyId}`;
+            let url = `${import.meta.env.VITE_API_URL || 'https://hrms-backend-22uq.onrender.com/api'}/visits/${user.companyId}`;
             const response = await fetch(url);
             if (response.ok) {
                 let data = await response.json();
@@ -122,7 +122,7 @@ const SalesVisits = () => {
     const fetchRoute = async (showLoader = false) => {
         if (!selectedEmployee) return;
         try {
-            const res = await fetch(`http://127.0.0.1:5000/api/gps/route/${selectedEmployee}`);
+            const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://hrms-backend-22uq.onrender.com/api'}/gps/route/${selectedEmployee}`);
             if (res.ok) {
                 let data = await res.json();
                 data = data.filter(p => p.timestamp && p.timestamp.slice(0, 10) === selectedDate);
@@ -134,7 +134,7 @@ const SalesVisits = () => {
     const handleDeleteVisit = async (visitId) => {
         if (!window.confirm('Are you sure you want to delete this visit log?')) return;
         try {
-            const res = await fetch(`http://127.0.0.1:5000/api/visits/${visitId}`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://hrms-backend-22uq.onrender.com/api'}/visits/${visitId}`, {
                 method: 'DELETE'
             });
             if (res.ok) {

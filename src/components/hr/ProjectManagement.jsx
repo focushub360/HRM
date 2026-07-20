@@ -14,7 +14,7 @@ const TASK_STATUS = {
     'Completed':   { color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
 };
 
-const API = 'http://localhost:5000/api';
+const API = `${import.meta.env.VITE_API_URL || 'https://hrms-backend-22uq.onrender.com/api'}`;
 
 // ─── Avatar ──────────────────────────────────────────────────────────────────
 const Avatar = ({ name = '', size = 36, color = '#4f46e5' }) => {

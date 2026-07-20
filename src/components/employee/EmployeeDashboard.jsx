@@ -38,7 +38,7 @@ const EmployeeDashboard = () => {
   const fetchMyTasks = async () => {
     if (!user?.empId) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/tasks/user/${user.empId}`);
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://hrms-backend-22uq.onrender.com/api'}/tasks/user/${user.empId}`);
       if (res.ok) {
         const data = await res.json();
         setMyTasks(data);
@@ -54,7 +54,7 @@ const EmployeeDashboard = () => {
 
   const handleTaskStatusUpdate = async (taskId, newStatus) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/project-tasks/${taskId}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://hrms-backend-22uq.onrender.com/api'}/project-tasks/${taskId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus })
