@@ -35,7 +35,7 @@ const CompanyDashboard = () => {
   };
 
   return (
-    <div className="container-fluid" style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', paddingTop: '60px', paddingBottom: '20px', color: 'var(--text-main)' }}>
+    <div className="container-fluid" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', overflowX: 'hidden', paddingTop: '60px', paddingBottom: '20px', color: 'var(--text-main)' }}>
       <div className="d-flex justify-content-between align-items-center mb-4 ps-5">
         <div>
           <div className="d-flex align-items-center gap-3">
@@ -173,16 +173,16 @@ const CompanyDashboard = () => {
         </div>
       </div>
 
-      <div className="row mt-2 flex-grow-1" style={{ minHeight: 0 }}>
-        <div className="col-12 h-100">
-          <div className="card shadow-sm h-100 d-flex flex-column">
-            <div className="card-header py-3 flex-shrink-0" style={{ backgroundColor: 'transparent', borderBottom: '1px solid var(--border-color)' }}>
+      <div className="row mt-2" style={{ marginBottom: '20px' }}>
+        <div className="col-12">
+          <div className="card shadow-sm d-flex flex-column">
+            <div className="card-header py-3" style={{ backgroundColor: 'transparent', borderBottom: '1px solid var(--border-color)' }}>
               <h5 className="mb-0 text-primary fw-bold">Company Overview</h5>
             </div>
-            <div className="card-body p-0 flex-grow-1" style={{ overflowY: 'auto', minHeight: 0 }}>
-              <div className="table-responsive h-100">
-                <table className="table table-hover mb-0 align-middle sticky-top" style={{ color: 'var(--text-main)' }}>
-                  <thead className="table-light sticky-top" style={{ zIndex: 1, top: 0 }}>
+            <div className="card-body p-0">
+              <div className="table-responsive">
+                <table className="table table-hover mb-0 align-middle" style={{ color: 'var(--text-main)' }}>
+                  <thead className="table-light" style={{ backgroundColor: 'var(--bg-main)' }}>
                     <tr style={{ borderBottomColor: 'var(--border-color)' }}>
                       <th style={{ color: 'var(--text-muted)' }}>Company Name</th>
                       <th style={{ color: 'var(--text-muted)' }}>Code</th>

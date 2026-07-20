@@ -1232,3 +1232,18 @@ export const deleteAllMessages = async () => {
     return false;
   }
 };
+
+// ==================== FACE VERIFICATION ====================
+export const saveFaceProfile = async (userId, profileImageBase64, faceDescriptor) => {
+  try {
+    const docRef = db.collection('users').doc(userId);
+    await docRef.update({
+      profileImage: profileImageBase64,
+      faceDescriptor: faceDescriptor // array of numbers
+    });
+    return true;
+  } catch (error) {
+    console.error('Error saving face profile:', error);
+    return false;
+  }
+};

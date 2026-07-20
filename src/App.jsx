@@ -18,6 +18,7 @@ import Profile from "./components/Profile";
 import Feed from "./components/Feed";
 import Recognition from "./components/Recognition";
 import ActivityTracker from "./components/ActivityTracker";
+import FaceProctoring from "./components/employee/FaceProctoring";
 import Settings from "./components/Settings";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
 
@@ -60,6 +61,7 @@ function App() {
       <ThemeProvider>
         <div className="d-flex" style={{ height: "100vh", width: "100%", overflow: "hidden" }}>
           <ActivityTracker />
+          <FaceProctoring />
           <Sidebar />
           <MainContentWrapper />
         </div>

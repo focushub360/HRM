@@ -122,12 +122,12 @@ button {
 /* Glossy / Glass Utility Classes */
 .card,
 .card-custom {
-  background-color: #ffffff !important;
+  background-color: #ffffff;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  border: 1px solid #e5e7eb !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
-  color: #000000;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  color: inherit;
   border-radius: 12px;
 }
 

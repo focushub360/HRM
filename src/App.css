@@ -93,7 +93,7 @@ body {
   overflow-y: auto;
   white-space: nowrap;
   /* Prevent text wrapping during transition */
-  transition: width 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), background-color 0.3s ease;
+  transition: background-color 0.3s ease;
   z-index: 100;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
 }

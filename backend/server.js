@@ -791,6 +791,20 @@ app.get('/api/tasks/project/:projectId', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ==================== FACE VERIFICATION ====================
+app.post('/api/users/:userId/face-profile', async (req, res) => {
+  try {
+    const { profileImageBase64, faceDescriptor } = req.body;
+    const result = await db.saveFaceProfile(req.params.userId, profileImageBase64, faceDescriptor);
+    if (result) {
+      res.json({ message: 'Face profile saved successfully' });
+    } else {
+      res.status(500).json({ error: 'Failed to save face profile in database' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ==================== SCHEDULER (WEEKLY CLEANUP) ====================
 // Check every hour if it's Monday 00:00 to delete messages

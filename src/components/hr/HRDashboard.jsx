@@ -118,11 +118,11 @@ const HRDashboard = () => {
 
   return (
     <div className="company-management-container" style={{
-      height: '100%',
+      minHeight: '100vh',
       display: 'flex',
       flexDirection: 'column',
       padding: '60px 1rem 1rem 1rem',
-      overflow: 'hidden',
+      overflowX: 'hidden',
       color: 'var(--text-main)'
     }}>
       {/* Top Header Bar */}
@@ -237,7 +237,7 @@ const HRDashboard = () => {
       </div>
 
       {/* Employees Table */}
-      <div className="card border-0 shadow-sm flex-grow-1" style={{ minHeight: 0, display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-card)', borderRadius: '12px' }}>
+      <div className="card border-0 shadow-sm" style={{ display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-card)', borderRadius: '12px', marginBottom: '20px' }}>
         <div className="card-header border-0 bg-transparent py-3 d-flex justify-content-between align-items-center">
           <h5 className="mb-0 fw-bold" style={{ color: 'var(--text-main)' }}>Employees List</h5>
           <div className="input-group" style={{ width: '250px' }}>
@@ -245,10 +245,10 @@ const HRDashboard = () => {
             <input type="text" className="form-control border-0 bg-light" placeholder="Search employees..." style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-main)' }} />
           </div>
         </div>
-        <div className="card-body p-0 flex-grow-1" style={{ overflow: 'hidden' }}>
-          <div className="table-responsive h-100">
-            <table className="table mb-0 sticky-top" style={{ color: 'var(--text-main)' }}>
-              <thead className="sticky-top" style={{ zIndex: 1, top: 0 }}>
+        <div className="card-body p-0">
+          <div className="table-responsive">
+            <table className="table mb-0" style={{ color: 'var(--text-main)' }}>
+              <thead style={{ backgroundColor: 'var(--bg-main)' }}>
                 <tr style={{ backgroundColor: 'var(--bg-main)' }}>
                   <th className="border-0 px-4 py-3 text-muted small text-uppercase" style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-muted)' }}>Name</th>
                   <th className="border-0 px-4 py-3 text-muted small text-uppercase" style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-muted)' }}>Email</th>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import FaceCaptureModal from './employee/FaceCaptureModal.jsx';
 import './Auth.css';
 import loginLogo from '../assets/login_logo.png';
 import {
@@ -25,6 +26,8 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [showFaceCapture, setShowFaceCapture] = useState(false);
+  const [pendingUserData, setPendingUserData] = useState(null);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
@@ -71,7 +74,12 @@ const Login = () => {
         loginSource
       };
 
-      login(userData);
+      if (loginType === 'employee') {
+        setPendingUserData(userData);
+        setShowFaceCapture(true);
+      } else {
+        login(userData);
+      }
       // Navigation handled by useEffect
     } catch (err) {
       console.error('Login error:', err);
@@ -88,6 +96,19 @@ const Login = () => {
 
   return (
     <div className="login-page">
+      {showFaceCapture && pendingUserData && (
+        <FaceCaptureModal 
+          user={pendingUserData}
+          onComplete={(faceData) => {
+            login({ ...pendingUserData, ...faceData });
+            setShowFaceCapture(false);
+          }}
+          onCancel={() => {
+            setShowFaceCapture(false);
+            setLoading(false);
+          }}
+        />
+      )}
       <div className="glass-container">
         {/* Left Hero Section */}
         <div className="login-hero">

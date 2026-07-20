@@ -94,8 +94,8 @@ const LiveMonitoring = () => {
                         <small className="text-muted">{log.empId}</small>
                       </td>
                       <td className="py-3">
-                        <span className={`badge ${isSleeping ? 'bg-danger' : isAway ? 'bg-warning text-dark' : 'bg-success'} rounded-pill px-3 py-2`} style={isSleeping ? { animation: 'pulse 1s infinite' } : {}}>
-                          {isSleeping ? '😴 SLEEPING' : displayStatus}
+                        <span className={`badge ${log.mismatchAlert ? 'bg-danger' : isSleeping ? 'bg-danger' : isAway ? 'bg-warning text-dark' : 'bg-success'} rounded-pill px-3 py-2`} style={(isSleeping || log.mismatchAlert) ? { animation: 'pulse 1s infinite' } : {}}>
+                          {log.mismatchAlert ? '🚨 IDENTITY MISMATCH' : isSleeping ? '😴 SLEEPING' : displayStatus}
                         </span>
                       </td>
                       <td className="py-3">
