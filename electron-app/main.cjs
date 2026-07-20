@@ -25,6 +25,23 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+    // Automatically allow camera and microphone access
+    const { session } = require('electron');
+    session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+        if (permission === 'media') {
+            callback(true);
+        } else {
+            callback(true);
+        }
+    });
+
+    session.defaultSession.setPermissionCheckHandler((webContents, permission) => {
+        if (permission === 'media') {
+            return true;
+        }
+        return true;
+    });
+
     createWindow();
 
     ipcMain.handle('get-active-window', async () => {
