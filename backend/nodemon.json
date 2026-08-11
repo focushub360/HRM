@@ -1,6 +1,5 @@
 {
-    "ignore": [
-        "data/*",
-        "data/database.json"
-    ]
+  "watch": ["server.js", "src"],
+  "ext": "js,json",
+  "ignore": ["node_modules"]
 }
