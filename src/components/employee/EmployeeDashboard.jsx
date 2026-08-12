@@ -5,6 +5,7 @@ import { useTheme } from "../../context/ThemeContext";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import SuccessModal from "../common/SuccessModal";
 import WebcamMonitor from "./WebcamMonitor";
+import DailyWorkCheckoutModal from "./DailyWorkCheckoutModal";
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, AreaChart, Area, CartesianGrid, Legend,
@@ -27,6 +28,7 @@ const EmployeeDashboard = () => {
   const [inactivityWarning, setInactivityWarning] = useState(false);
   const [lastActivityTime, setLastActivityTime] = useState(null);
   const [sessionDuration, setSessionDuration] = useState("00:00:00");
+  const [showDailyWorkModal, setShowDailyWorkModal] = useState(false);
 
   // Stats
   const [stats, setStats] = useState({
@@ -595,7 +597,7 @@ const EmployeeDashboard = () => {
             </button>
           )}
           {hasCheckedInToday && !hasCheckedOutToday && !isOnBreak && (
-            <button className="btn btn-danger px-4 py-2" onClick={() => handleCheckOut(false)}>
+            <button className="btn btn-danger px-4 py-2" onClick={() => setShowDailyWorkModal(true)}>
               <i className="bi bi-stop-circle me-2"></i> CHECK OUT
             </button>
           )}
@@ -1165,6 +1167,16 @@ const EmployeeDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Daily Work Checkout Modal */}
+      <DailyWorkCheckoutModal
+        isOpen={showDailyWorkModal}
+        onClose={() => setShowDailyWorkModal(false)}
+        onConfirmCheckout={() => handleCheckOut(false)}
+        sessionDuration={sessionDuration}
+        checkInTime={checkInTime}
+        locationAddress={locationAddress}
+      />
     </div>
   );
 };

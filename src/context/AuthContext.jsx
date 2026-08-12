@@ -730,6 +730,50 @@ export const AuthProvider = ({ children }) => {
     return false;
   };
 
+  const submitDailyWorkReport = async (reportData) => {
+    try {
+      const payload = {
+        ...reportData,
+        userId: user?.empId || user?.id,
+        userName: user?.name,
+        companyId: user?.companyId,
+      };
+      const res = await fetch(`${API_URL}/daily-reports`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return data.report || data;
+      }
+      return null;
+    } catch (err) {
+      console.error("Error submitting daily work report:", err);
+      return null;
+    }
+  };
+
+  const getDailyWorkReports = async (filters = {}) => {
+    try {
+      const companyId = filters.companyId || user?.companyId;
+      const queryParams = new URLSearchParams();
+      if (companyId) queryParams.append('companyId', companyId);
+      if (filters.date) queryParams.append('date', filters.date);
+      if (filters.month) queryParams.append('month', filters.month);
+      if (filters.userId) queryParams.append('userId', filters.userId);
+
+      const res = await fetch(`${API_URL}/daily-reports?${queryParams.toString()}`);
+      if (res.ok) {
+        return await res.json();
+      }
+      return [];
+    } catch (err) {
+      console.error("Error fetching daily work reports:", err);
+      return [];
+    }
+  };
+
   const value = {
     user,
     isAuthenticated,
@@ -770,6 +814,8 @@ export const AuthProvider = ({ children }) => {
     recognitions,
     fetchRecognitions,
     submitRecognition,
+    submitDailyWorkReport,
+    getDailyWorkReports,
     refreshActivityLogs: async () => {
       if (!isAuthenticated || !user?.companyId) return;
       setLoading(true);

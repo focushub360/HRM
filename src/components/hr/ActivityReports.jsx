@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
 
 const ActivityReports = () => {
-  const { user, activityLog: contextLogs, inactivityAlerts, deleteActivity, companies, getCompanyActivities, refreshActivityLogs } = useAuth();
+  const { user, activityLog: contextLogs, inactivityAlerts, deleteActivity, companies, getCompanyActivities, refreshActivityLogs, getDailyWorkReports } = useAuth();
   const location = useLocation();
   const [selectedCompany, setSelectedCompany] = useState("");
   // Helper to get local date string YYYY-MM-DD from timestamp
@@ -15,9 +15,9 @@ const ActivityReports = () => {
     return local.toISOString().split("T")[0];
   };
 
-
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
   const [activityLogs, setActivityLogs] = useState([]);
+  const [dailyWorkReports, setDailyWorkReports] = useState([]);
   const [employeeTypeFilter, setEmployeeTypeFilter] = useState('all');
   const [employeeFilter, setEmployeeFilter] = useState('all'); // Filter by specific employee name/ID
   const [searchQuery, setSearchQuery] = useState('');
@@ -26,13 +26,21 @@ const ActivityReports = () => {
   const fetchLogs = async () => {
     try {
       if (user?.type === 'hr' || user?.type === 'company') {
-        const logs = await getCompanyActivities(user.companyId);
+        const [logs, reports] = await Promise.all([
+          getCompanyActivities(user.companyId),
+          getDailyWorkReports ? getDailyWorkReports({ companyId: user.companyId }) : []
+        ]);
         setActivityLogs(logs || []);
+        setDailyWorkReports(reports || []);
       } else if (!user?.companyId) {
         setActivityLogs(contextLogs || []);
+        if (getDailyWorkReports) {
+          const reports = await getDailyWorkReports({});
+          setDailyWorkReports(reports || []);
+        }
       }
     } catch (e) {
-      console.error("Error fetching activity logs:", e);
+      console.error("Error fetching activity logs and reports:", e);
     }
   };
 
@@ -107,6 +115,21 @@ const ActivityReports = () => {
     }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
   }, [activityLogs, selectedMonth, employeeTypeFilter, employeeFilter, searchQuery]);
 
+  // Filter Daily Work Reports
+  const filteredDailyWorkReports = useMemo(() => {
+    return dailyWorkReports.filter(report => {
+      const reportDate = report.date;
+      const dateMatch = !selectedMonth || reportDate.startsWith(selectedMonth);
+      const empMatch = employeeFilter === 'all' || report.userId === employeeFilter;
+      const searchMatch = !searchQuery ||
+        (report.userName && report.userName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (report.userId && report.userId.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (report.tasks && report.tasks.some(t => (t.title && t.title.toLowerCase().includes(searchQuery.toLowerCase())) || (t.update && t.update.toLowerCase().includes(searchQuery.toLowerCase()))));
+
+      return dateMatch && empMatch && searchMatch;
+    }).sort((a, b) => new Date(b.date || b.submittedAt) - new Date(a.date || a.submittedAt));
+  }, [dailyWorkReports, selectedMonth, employeeFilter, searchQuery]);
+
   // Calculate total active time per employee
   const calculateEmployeeStats = () => {
     const employees = {};
@@ -119,6 +142,7 @@ const ActivityReports = () => {
           employeeType: log.employeeType || 'Office',
           loginCount: 0,
           checkInCount: 0,
+          workReportCount: 0,
           lastAction: log.action,
           lastActivityTime: log.timestamp,
           inactivityCount: 0,
@@ -133,6 +157,13 @@ const ActivityReports = () => {
       if (!employees[log.userId].lastActivityTime || new Date(log.timestamp) > new Date(employees[log.userId].lastActivityTime)) {
         employees[log.userId].lastAction = log.action;
         employees[log.userId].lastActivityTime = log.timestamp;
+      }
+    });
+
+    // Tally work reports count
+    dailyWorkReports.forEach(r => {
+      if (employees[r.userId]) {
+        employees[r.userId].workReportCount++;
       }
     });
 
@@ -195,6 +226,33 @@ const ActivityReports = () => {
     document.body.removeChild(link);
   };
 
+  const handleExportWorkReportsCSV = () => {
+    if (filteredDailyWorkReports.length === 0) {
+      alert("No work reports available to export.");
+      return;
+    }
+    const headers = ["Date", "Employee ID", "Employee Name", "Tasks Count", "Tasks Details", "In Time", "Out Time", "Duration", "Location"];
+    const rows = filteredDailyWorkReports.map(r => [
+      `"${r.formattedDate || r.date}"`,
+      `"${r.userId || ''}"`,
+      `"${r.userName || ''}"`,
+      `"${(r.tasks || []).length}"`,
+      `"${(r.tasks || []).map(t => `${t.title}: ${t.update} (${t.status})`).join(' | ').replace(/"/g, '""')}"`,
+      `"${r.checkInTime || ''}"`,
+      `"${r.checkOutTime || ''}"`,
+      `"${r.totalSessionDuration || ''}"`,
+      `"${r.locationAddress || ''}"`
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Daily_Work_Reports_${selectedMonth || 'All'}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const [currentView, setCurrentView] = useState('dashboard');
 
   useEffect(() => {
@@ -208,7 +266,7 @@ const ActivityReports = () => {
       setEmployeeFilter('all');
     }
 
-    if (viewParam && ['dashboard', 'logins', 'events', 'inactivity'].includes(viewParam)) {
+    if (viewParam && ['dashboard', 'logins', 'events', 'inactivity', 'work_reports'].includes(viewParam)) {
       setCurrentView(viewParam);
     } else if (employeeParam) {
       setCurrentView('logins');
@@ -221,10 +279,10 @@ const ActivityReports = () => {
 
   const renderDashboard = () => (
     <div>
-      {/* 3 Metric Cards */}
-      <div className="row g-4 mb-4">
+      {/* 4 Metric Cards */}
+      <div className="row g-3 mb-4">
         {/* Employee Logins Card */}
-        <div className="col-md-4">
+        <div className="col-lg-3 col-md-6">
           <div
             className="card shadow-sm border-start border-primary h-100 cursor-pointer hover-scale transition-all"
             onClick={() => handleViewChange('logins')}
@@ -232,27 +290,27 @@ const ActivityReports = () => {
             onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
             onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
           >
-            <div className="card-body p-4 d-flex flex-column justify-content-between">
-              <div className="d-flex justify-content-between align-items-start mb-3">
+            <div className="card-body p-3 d-flex flex-column justify-content-between">
+              <div className="d-flex justify-content-between align-items-start mb-2">
                 <div>
                   <h6 className="text-uppercase fw-bold text-muted small mb-1">Employee Logins</h6>
-                  <h2 className="fw-bold mb-0 text-primary">
+                  <h3 className="fw-bold mb-0 text-primary">
                     {filteredLogs.filter(l => (l.action === 'LOGIN' || l.action === 'LOGOUT') && l.userId?.startsWith('EMP-')).length}
-                  </h2>
+                  </h3>
                 </div>
-                <div className="p-3 rounded-circle" style={{ backgroundColor: 'rgba(99, 102, 241, 0.1)' }}>
-                  <i className="bi bi-person-check-fill fs-3 text-primary"></i>
+                <div className="p-2 rounded-circle" style={{ backgroundColor: 'rgba(99, 102, 241, 0.1)' }}>
+                  <i className="bi bi-person-check-fill fs-4 text-primary"></i>
                 </div>
               </div>
               <p className="text-muted small mb-0">
-                <i className="bi bi-clock-history me-1"></i> View Login & Logout History
+                <i className="bi bi-clock-history me-1"></i> Login & Logout Stream
               </p>
             </div>
           </div>
         </div>
 
         {/* System Events Card */}
-        <div className="col-md-4">
+        <div className="col-lg-3 col-md-6">
           <div
             className="card shadow-sm border-start border-success h-100 cursor-pointer transition-all"
             onClick={() => handleViewChange('events')}
@@ -260,16 +318,16 @@ const ActivityReports = () => {
             onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
             onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
           >
-            <div className="card-body p-4 d-flex flex-column justify-content-between">
-              <div className="d-flex justify-content-between align-items-start mb-3">
+            <div className="card-body p-3 d-flex flex-column justify-content-between">
+              <div className="d-flex justify-content-between align-items-start mb-2">
                 <div>
                   <h6 className="text-uppercase fw-bold text-muted small mb-1">System Events</h6>
-                  <h2 className="fw-bold mb-0 text-success">
+                  <h3 className="fw-bold mb-0 text-success">
                     {filteredLogs.filter(l => ['CHECK_IN', 'CHECK_OUT', 'LOCATION_UPDATE'].includes(l.action)).length}
-                  </h2>
+                  </h3>
                 </div>
-                <div className="p-3 rounded-circle" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)' }}>
-                  <i className="bi bi-calendar-event-fill fs-3 text-success"></i>
+                <div className="p-2 rounded-circle" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)' }}>
+                  <i className="bi bi-calendar-event-fill fs-4 text-success"></i>
                 </div>
               </div>
               <p className="text-muted small mb-0">
@@ -279,8 +337,36 @@ const ActivityReports = () => {
           </div>
         </div>
 
+        {/* Daily Work Reports Card (NEW) */}
+        <div className="col-lg-3 col-md-6">
+          <div
+            className="card shadow-sm border-start border-info h-100 cursor-pointer transition-all"
+            onClick={() => handleViewChange('work_reports')}
+            style={{ cursor: 'pointer', transition: 'transform 0.2s', borderLeftWidth: '5px', backgroundColor: 'var(--bg-card)' }}
+            onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
+            onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+          >
+            <div className="card-body p-3 d-flex flex-column justify-content-between">
+              <div className="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                  <h6 className="text-uppercase fw-bold text-muted small mb-1">Daily Work Reports</h6>
+                  <h3 className="fw-bold mb-0 text-info">
+                    {filteredDailyWorkReports.length}
+                  </h3>
+                </div>
+                <div className="p-2 rounded-circle" style={{ backgroundColor: 'rgba(6, 182, 212, 0.1)' }}>
+                  <i className="bi bi-journal-check fs-4 text-info"></i>
+                </div>
+              </div>
+              <p className="text-muted small mb-0">
+                <i className="bi bi-card-checklist me-1"></i> EOD Checkout Updates
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Inactivity Alerts Card */}
-        <div className="col-md-4">
+        <div className="col-lg-3 col-md-6">
           <div
             className="card shadow-sm border-start border-warning h-100 cursor-pointer transition-all"
             onClick={() => handleViewChange('inactivity')}
@@ -288,20 +374,20 @@ const ActivityReports = () => {
             onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
             onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
           >
-            <div className="card-body p-4 d-flex flex-column justify-content-between">
-              <div className="d-flex justify-content-between align-items-start mb-3">
+            <div className="card-body p-3 d-flex flex-column justify-content-between">
+              <div className="d-flex justify-content-between align-items-start mb-2">
                 <div>
                   <h6 className="text-uppercase fw-bold text-muted small mb-1">Inactivity Alerts</h6>
-                  <h2 className="fw-bold mb-0 text-warning">
+                  <h3 className="fw-bold mb-0 text-warning">
                     {filteredInactivityAlerts.length}
-                  </h2>
+                  </h3>
                 </div>
-                <div className="p-3 rounded-circle" style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)' }}>
-                  <i className="bi bi-exclamation-triangle-fill fs-3 text-warning"></i>
+                <div className="p-2 rounded-circle" style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)' }}>
+                  <i className="bi bi-exclamation-triangle-fill fs-4 text-warning"></i>
                 </div>
               </div>
               <p className="text-muted small mb-0">
-                <i className="bi bi-activity me-1"></i> Monitor Idle Time
+                <i className="bi bi-activity me-1"></i> Idle &gt; 150s Flags
               </p>
             </div>
           </div>
@@ -313,13 +399,18 @@ const ActivityReports = () => {
         <div className="card-header border-bottom py-3 d-flex justify-content-between align-items-center" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)' }}>
           <div className="d-flex align-items-center gap-2">
             <h5 className="mb-0 fw-bold" style={{ color: 'var(--text-main)' }}>
-              <i className="bi bi-people-fill text-primary me-2"></i>Employee-Wise Activity Summary
+              <i className="bi bi-people-fill text-primary me-2"></i>Employee-Wise Activity & Work Reports
             </h5>
             <span className="badge bg-primary bg-opacity-10 text-primary">{employeeStats.length} Employees</span>
           </div>
-          <button className="btn btn-sm btn-outline-success" onClick={handleExportCSV}>
-            <i className="bi bi-download me-1"></i> Export CSV
-          </button>
+          <div className="d-flex gap-2">
+            <button className="btn btn-sm btn-outline-info" onClick={() => handleViewChange('work_reports')}>
+              <i className="bi bi-journal-text me-1"></i> All Work Reports
+            </button>
+            <button className="btn btn-sm btn-outline-success" onClick={handleExportCSV}>
+              <i className="bi bi-download me-1"></i> Export CSV
+            </button>
+          </div>
         </div>
         <div className="card-body p-0">
           <div className="table-responsive">
@@ -330,7 +421,7 @@ const ActivityReports = () => {
                   <th style={{ color: 'var(--text-muted)' }}>Employee ID</th>
                   <th style={{ color: 'var(--text-muted)' }}>Type</th>
                   <th style={{ color: 'var(--text-muted)' }}>Check-Ins</th>
-                  <th style={{ color: 'var(--text-muted)' }}>Logins</th>
+                  <th style={{ color: 'var(--text-muted)' }}>Work Reports</th>
                   <th style={{ color: 'var(--text-muted)' }}>Inactivity Alerts</th>
                   <th style={{ color: 'var(--text-muted)' }}>Latest Activity</th>
                   <th className="text-end pe-4" style={{ color: 'var(--text-muted)' }}>Action</th>
@@ -352,7 +443,11 @@ const ActivityReports = () => {
                       <td>
                         <span className="badge bg-success bg-opacity-15 text-success border border-success">{emp.checkInCount} Check-ins</span>
                       </td>
-                      <td>{emp.loginCount} times</td>
+                      <td>
+                        <span className="badge bg-primary bg-opacity-15 text-primary border border-primary">
+                          <i className="bi bi-journal-check me-1"></i>{emp.workReportCount} Reports
+                        </span>
+                      </td>
                       <td>
                         {emp.inactivityCount > 0 ? (
                           <span className="badge bg-warning text-dark">⚠️ {emp.inactivityCount} flags</span>
@@ -365,15 +460,28 @@ const ActivityReports = () => {
                         <small className="text-muted">{emp.lastActivityTime ? new Date(emp.lastActivityTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}</small>
                       </td>
                       <td className="text-end pe-4">
-                        <button
-                          className="btn btn-sm btn-outline-primary"
-                          onClick={() => {
-                            setEmployeeFilter(emp.userId);
-                            setCurrentView('logins');
-                          }}
-                        >
-                          <i className="bi bi-eye me-1"></i> View Logs
-                        </button>
+                        <div className="d-inline-flex gap-1">
+                          <button
+                            className="btn btn-sm btn-outline-info"
+                            title="View Daily Work Reports"
+                            onClick={() => {
+                              setEmployeeFilter(emp.userId);
+                              setCurrentView('work_reports');
+                            }}
+                          >
+                            <i className="bi bi-journal-text me-1"></i> Reports
+                          </button>
+                          <button
+                            className="btn btn-sm btn-outline-primary"
+                            title="View Stream Logs"
+                            onClick={() => {
+                              setEmployeeFilter(emp.userId);
+                              setCurrentView('logins');
+                            }}
+                          >
+                            <i className="bi bi-eye me-1"></i> Logs
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -387,6 +495,124 @@ const ActivityReports = () => {
               </tbody>
             </table>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderWorkReportsTable = () => (
+    <div className="card shadow-sm border-0" style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', borderRadius: '14px' }}>
+      <div className="card-header border-bottom py-3 d-flex justify-content-between align-items-center" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)' }}>
+        <div className="d-flex align-items-center gap-2">
+          <h5 className="mb-0 fw-bold text-info"><i className="bi bi-journal-check me-2"></i>Employee Day-Wise Work Reports</h5>
+          <span className="badge bg-info bg-opacity-10 text-info border border-info px-3">
+            {filteredDailyWorkReports.length} Reports Logged
+          </span>
+        </div>
+        <button className="btn btn-sm btn-outline-success" onClick={handleExportWorkReportsCSV}>
+          <i className="bi bi-download me-1"></i> Export Work Reports
+        </button>
+      </div>
+      <div className="card-body p-0">
+        <div className="table-responsive">
+          <table className="table table-hover align-middle mb-0" style={{ color: 'var(--text-main)' }}>
+            <thead style={{ backgroundColor: 'var(--bg-main)' }}>
+              <tr>
+                <th className="py-3 ps-4" style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-muted)' }}>Date & Shift</th>
+                <th style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-muted)' }}>Employee</th>
+                <th style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-muted)' }}>Tasks & Progress</th>
+                <th style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-muted)' }}>Duration / Times</th>
+                <th style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-muted)' }}>Location</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredDailyWorkReports.length > 0 ? (
+                filteredDailyWorkReports.map((report) => (
+                  <tr key={report.id || report._id} style={{ borderBottomColor: 'var(--border-color)' }}>
+                    <td className="ps-4 align-top py-3" style={{ minWidth: '160px' }}>
+                      <div className="fw-bold" style={{ color: 'var(--text-main)' }}>
+                        {report.formattedDate || report.date}
+                      </div>
+                      <small className="text-muted">{report.date}</small>
+                    </td>
+                    <td className="align-top py-3" style={{ minWidth: '160px' }}>
+                      <div className="fw-bold" style={{ color: 'var(--text-main)' }}>{report.userName}</div>
+                      <span className="badge bg-secondary bg-opacity-75">{report.userId}</span>
+                    </td>
+                    <td className="align-top py-3" style={{ minWidth: '320px' }}>
+                      {report.tasks && report.tasks.length > 0 ? (
+                        <div className="d-flex flex-column gap-2">
+                          {report.tasks.map((task, idx) => (
+                            <div
+                              key={idx}
+                              className="p-2 rounded border"
+                              style={{
+                                backgroundColor: 'var(--bg-main)',
+                                borderColor: 'var(--border-color)',
+                                fontSize: '0.86rem'
+                              }}
+                            >
+                              <div className="d-flex justify-content-between align-items-center mb-1">
+                                <span className="fw-bold" style={{ color: 'var(--text-main)' }}>
+                                  {task.title}
+                                </span>
+                                <span
+                                  className={`badge ${
+                                    task.status === 'Completed' ? 'bg-success' :
+                                    task.status === 'In Progress' ? 'bg-primary' :
+                                    task.status === 'Blocked' ? 'bg-danger' : 'bg-purple'
+                                  }`}
+                                  style={{
+                                    backgroundColor: task.status === 'Review' ? '#a855f7' : undefined,
+                                    fontSize: '0.72rem'
+                                  }}
+                                >
+                                  {task.status}
+                                </span>
+                              </div>
+                              <div className="text-muted small" style={{ whiteSpace: 'pre-wrap' }}>
+                                {task.update}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-muted small">No specific task updates logged.</span>
+                      )}
+                      {report.generalNotes && (
+                        <div className="mt-2 small text-muted">
+                          <strong>Notes:</strong> {report.generalNotes}
+                        </div>
+                      )}
+                    </td>
+                    <td className="align-top py-3" style={{ minWidth: '150px' }}>
+                      <div className="small">
+                        <div><strong>In:</strong> {report.checkInTime || '--'}</div>
+                        <div><strong>Out:</strong> {report.checkOutTime || '--'}</div>
+                        {report.totalSessionDuration && (
+                          <div className="mt-1 badge bg-dark bg-opacity-10 text-dark border">
+                            ⏱️ {report.totalSessionDuration}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="align-top py-3" style={{ minWidth: '150px' }}>
+                      <small className="text-muted d-block text-truncate" style={{ maxWidth: '180px' }} title={report.locationAddress}>
+                        <i className="bi bi-geo-alt me-1 text-primary"></i>
+                        {report.locationAddress || 'Office / Remote'}
+                      </small>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" className="text-center py-5 text-muted">
+                    No daily work reports found for the selected filter.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -566,7 +792,8 @@ const ActivityReports = () => {
             <h4 className="fw-bold mb-0" style={{ color: 'var(--text-main)' }}>
               {currentView === 'dashboard' ? 'Activity Reports Dashboard' :
                 currentView === 'logins' ? 'Employee Login Reports' :
-                  currentView === 'events' ? 'System Event Reports' : 'Inactivity Activity Reports'}
+                  currentView === 'events' ? 'System Event Reports' :
+                    currentView === 'work_reports' ? 'Employee Day-Wise Work Reports' : 'Inactivity Activity Reports'}
             </h4>
             <button
               className="btn btn-sm btn-outline-secondary"
@@ -660,6 +887,7 @@ const ActivityReports = () => {
       {currentView === 'logins' && renderLoginTable()}
       {currentView === 'events' && renderEventsTable()}
       {currentView === 'inactivity' && renderInactivityTable()}
+      {currentView === 'work_reports' && renderWorkReportsTable()}
 
     </div>
   );

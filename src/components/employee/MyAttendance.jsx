@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { useNavigate } from 'react-router-dom';
 import MyPermissions from './MyPermissions.jsx';
 import MyActivityLogs from './MyActivityLogs.jsx';
+import DailyWorkCheckoutModal from './DailyWorkCheckoutModal.jsx';
 
 const MyAttendance = () => {
     const { user, logActivity, activityLog, notifyInactivityAlert } = useAuth();
@@ -18,6 +19,7 @@ const MyAttendance = () => {
     const [locationAddress, setLocationAddress] = useState("Fetching location...");
     const [locationCoords, setLocationCoords] = useState(null);
     const [currentTime, setCurrentTime] = useState(new Date());
+    const [showDailyWorkModal, setShowDailyWorkModal] = useState(false);
 
     // Inactivity State
     const [inactivityWarning, setInactivityWarning] = useState(false);
@@ -568,7 +570,7 @@ const MyAttendance = () => {
                             {locating ? <><span className="spinner-border spinner-border-sm me-2"></span>Locating...</> : <><i className="bi bi-play-circle me-2"></i> Check In</>}
                         </button>
                     ) : (
-                        <button className="btn btn-outline-danger px-4" onClick={() => handleCheckOut(false)} disabled={locating}>
+                        <button className="btn btn-outline-danger px-4" onClick={() => setShowDailyWorkModal(true)} disabled={locating}>
                             {locating ? <><span className="spinner-border spinner-border-sm me-2"></span>Locating...</> : <><i className="bi bi-stop-circle me-2"></i> Check Out</>}
                         </button>
                     )}
@@ -606,6 +608,14 @@ const MyAttendance = () => {
             {/* Tab Content */}
             {renderContent()}
 
+            {/* Daily Work Checkout Modal */}
+            <DailyWorkCheckoutModal
+                isOpen={showDailyWorkModal}
+                onClose={() => setShowDailyWorkModal(false)}
+                onConfirmCheckout={() => handleCheckOut(false)}
+                checkInTime={checkInTime}
+                locationAddress={locationAddress}
+            />
         </div>
     );
 };
