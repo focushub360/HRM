@@ -11,9 +11,8 @@ function createWindow() {
             preload: path.join(__dirname, 'preload.cjs'),
             contextIsolation: true,
             nodeIntegration: false,
-            nodeIntegration: false,
         },
-        icon: path.join(__dirname, '../src/assets/icon.png')
+        icon: path.join(__dirname, '../src/assets/Logo.png')
     });
 
     if (app.isPackaged) {
