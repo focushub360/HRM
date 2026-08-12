@@ -163,10 +163,15 @@ const Txt = (props) => (
 );
 
 // ─── Project Card ─────────────────────────────────────────────────────────────
-const ProjectCard = ({ project, tasks = [], employees, onAddTask }) => {
+const ProjectCard = ({ project, tasks = [], employees, onAddTask, onUpdateTaskStatus, onUpdateProjectStatus, user, canCreateProject }) => {
     const [expanded, setExpanded] = useState(false);
     const pct = tasks.length === 0 ? 0 : Math.round(tasks.filter(t => t.status === 'Completed').length / tasks.length * 100);
     const teamColors = ['#4f46e5', '#7c3aed', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'];
+
+    const myId = String(user?.empId || user?.id);
+    const isMember = project.teamMembers?.some(m => String(m.id) === myId);
+    const memberObj = project.teamMembers?.find(m => String(m.id) === myId);
+    const isProjectLead = memberObj?.role?.toLowerCase()?.includes('lead') || canCreateProject;
 
     const getEmpName = (id) => employees.find(e => e.id === parseInt(id))?.name || id;
 
@@ -188,7 +193,36 @@ const ProjectCard = ({ project, tasks = [], employees, onAddTask }) => {
             <div style={{ padding: '20px 22px', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
                 {/* Top row */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-                    <StatusBadge status={project.status || 'Active'} config={STATUS_CONFIG} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        {canCreateProject || isProjectLead ? (
+                            <select
+                                value={project.status || 'Active'}
+                                onChange={(e) => onUpdateProjectStatus && onUpdateProjectStatus(project.id, e.target.value)}
+                                style={{
+                                    padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+                                    background: (STATUS_CONFIG[project.status || 'Active'] || STATUS_CONFIG['Active']).bg,
+                                    color: (STATUS_CONFIG[project.status || 'Active'] || STATUS_CONFIG['Active']).color,
+                                    border: 'none', cursor: 'pointer', outline: 'none'
+                                }}
+                            >
+                                <option value="Active">Active</option>
+                                <option value="On Hold">On Hold</option>
+                                <option value="Completed">Done</option>
+                            </select>
+                        ) : (
+                            <StatusBadge status={project.status || 'Active'} config={STATUS_CONFIG} />
+                        )}
+
+                        {isMember && (
+                            <span style={{
+                                padding: '3px 9px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+                                background: 'rgba(16,185,129,0.12)', color: '#10b981',
+                                display: 'inline-flex', alignItems: 'center', gap: 4
+                            }}>
+                                ✓ Assigned {memberObj?.role ? `(${memberObj.role})` : ''}
+                            </span>
+                        )}
+                    </div>
                     <ProgressRing pct={pct} size={48} stroke={4} />
                 </div>
 
@@ -274,25 +308,39 @@ const ProjectCard = ({ project, tasks = [], employees, onAddTask }) => {
                     </button>
 
                     {expanded && (
-                        <div style={{ maxHeight: 180, overflowY: 'auto', marginBottom: 12 }}>
+                        <div style={{ maxHeight: 200, overflowY: 'auto', marginBottom: 12 }}>
                             {tasks.length === 0
                                 ? <p style={{ textAlign: 'center', color: 'var(--text-muted, #6b7280)', fontSize: 13, padding: '12px 0', margin: 0 }}>No tasks yet</p>
                                 : tasks.map(task => {
                                     const ts = TASK_STATUS[task.status] || TASK_STATUS['Todo'];
+                                    const isMyTask = String(task.assignedTo) === myId;
                                     return (
-                                        <div key={task.id} style={{
+                                        <div key={task.id || task._id} style={{
                                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                            padding: '8px 10px', borderRadius: 9, marginBottom: 5,
-                                            background: 'rgba(0,0,0,0.025)',
+                                            padding: '8px 10px', borderRadius: 9, marginBottom: 6,
+                                            background: isMyTask ? 'rgba(79,70,229,0.06)' : 'rgba(0,0,0,0.025)',
+                                            border: isMyTask ? '1px solid rgba(79,70,229,0.25)' : '1px solid transparent',
                                         }}>
-                                            <div>
-                                                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-main)' }}>{task.title}</div>
-                                                <div style={{ fontSize: 11, color: 'var(--text-muted, #6b7280)' }}>→ {task.assignedToName}</div>
+                                            <div style={{ flexGrow: 1, marginRight: 8 }}>
+                                                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                    {task.title}
+                                                    {isMyTask && <span style={{ fontSize: 10, background: '#4f46e5', color: '#fff', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>Your Task</span>}
+                                                </div>
+                                                <div style={{ fontSize: 11, color: 'var(--text-muted, #6b7280)' }}>→ {task.assignedToName || 'Unassigned'}</div>
                                             </div>
-                                            <span style={{
-                                                padding: '2px 8px', borderRadius: 12, fontSize: 10, fontWeight: 600,
-                                                background: ts.bg, color: ts.color, whiteSpace: 'nowrap',
-                                            }}>{task.status}</span>
+                                            <select
+                                                value={task.status || 'Todo'}
+                                                onChange={(e) => onUpdateTaskStatus(task.id || task._id, e.target.value)}
+                                                style={{
+                                                    padding: '3px 8px', borderRadius: 12, fontSize: 11, fontWeight: 600,
+                                                    background: ts.bg, color: ts.color, border: `1px solid ${ts.color}44`,
+                                                    cursor: 'pointer', outline: 'none'
+                                                }}
+                                            >
+                                                <option value="Todo">Todo</option>
+                                                <option value="In Progress">In Progress</option>
+                                                <option value="Completed">Completed</option>
+                                            </select>
                                         </div>
                                     );
                                 })
@@ -301,29 +349,31 @@ const ProjectCard = ({ project, tasks = [], employees, onAddTask }) => {
                     )}
                 </div>
 
-                {/* Add task button */}
-                <button onClick={() => onAddTask(project)} style={{
-                    width: '100%', padding: '10px', border: '1.5px dashed rgba(79,70,229,0.35)',
-                    borderRadius: 10, background: 'rgba(79,70,229,0.04)',
-                    color: '#4f46e5', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                    transition: 'background 0.15s, border-color 0.15s', marginTop: 'auto',
-                }}
-                onMouseOver={e => { e.currentTarget.style.background = 'rgba(79,70,229,0.1)'; e.currentTarget.style.borderColor = '#4f46e5'; }}
-                onMouseOut={e => { e.currentTarget.style.background = 'rgba(79,70,229,0.04)'; e.currentTarget.style.borderColor = 'rgba(79,70,229,0.35)'; }}
-                >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-                    </svg>
-                    Add Task
-                </button>
+                {/* Add task button - only for HR, TL, or Project Leads */}
+                {(canCreateProject || isProjectLead) && (
+                    <button onClick={() => onAddTask(project)} style={{
+                        width: '100%', padding: '10px', border: '1.5px dashed rgba(79,70,229,0.35)',
+                        borderRadius: 10, background: 'rgba(79,70,229,0.04)',
+                        color: '#4f46e5', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        transition: 'background 0.15s, border-color 0.15s', marginTop: 'auto',
+                    }}
+                    onMouseOver={e => { e.currentTarget.style.background = 'rgba(79,70,229,0.1)'; e.currentTarget.style.borderColor = '#4f46e5'; }}
+                    onMouseOut={e => { e.currentTarget.style.background = 'rgba(79,70,229,0.04)'; e.currentTarget.style.borderColor = 'rgba(79,70,229,0.35)'; }}
+                    >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
+                        Add Task
+                    </button>
+                )}
             </div>
         </div>
     );
 };
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
-const EmptyState = ({ onNew }) => (
+const EmptyState = ({ onNew, canCreateProject }) => (
     <div style={{
         gridColumn: '1 / -1', display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center', padding: '80px 20px',
@@ -338,32 +388,44 @@ const EmptyState = ({ onNew }) => (
                 <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
             </svg>
         </div>
-        <h3 style={{ margin: '0 0 8px', fontSize: 20, fontWeight: 700, color: 'var(--text-main)' }}>No projects yet</h3>
-        <p style={{ margin: '0 0 24px', fontSize: 14, color: 'var(--text-muted, #6b7280)', maxWidth: 340 }}>
-            Create your first project to start managing tasks and tracking progress with your team.
+        <h3 style={{ margin: '0 0 8px', fontSize: 20, fontWeight: 700, color: 'var(--text-main)' }}>
+            {canCreateProject ? 'No projects yet' : 'No assigned projects'}
+        </h3>
+        <p style={{ margin: '0 0 24px', fontSize: 14, color: 'var(--text-muted, #6b7280)', maxWidth: 360 }}>
+            {canCreateProject
+                ? 'Create your first project to start managing tasks and tracking progress with your team.'
+                : 'You have not been assigned to any projects yet. Your HR or Team Lead will assign you to projects.'}
         </p>
-        <button onClick={onNew} style={{
-            padding: '12px 28px', borderRadius: 12, border: 'none', cursor: 'pointer',
-            background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff',
-            fontSize: 14, fontWeight: 600, boxShadow: '0 4px 14px rgba(79,70,229,0.4)',
-            display: 'flex', alignItems: 'center', gap: 8,
-        }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-            Create First Project
-        </button>
+        {canCreateProject && (
+            <button onClick={onNew} style={{
+                padding: '12px 28px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff',
+                fontSize: 14, fontWeight: 600, boxShadow: '0 4px 14px rgba(79,70,229,0.4)',
+                display: 'flex', alignItems: 'center', gap: 8,
+            }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Create First Project
+            </button>
+        )}
     </div>
 );
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const ProjectManagement = () => {
     const { user, companies } = useAuth();
+    
+    // Determine permissions: Only HR, Company Admin, or Team Lead / Project Manager can create projects
+    const isHR = user?.type === 'hr' || user?.type === 'company' || user?.role === 'admin' || user?.isHeadHr;
+    const isTL = user?.role === 'project_manager' || user?.role === 'team_lead' || user?.designation?.toLowerCase()?.includes('lead') || user?.designation?.toLowerCase()?.includes('manager');
+    const canCreateProject = isHR || isTL;
+
     const [projects, setProjects]       = useState([]);
     const [taskMap,  setTaskMap]        = useState({});      // { [projectId]: task[] }
     const [employees, setEmployees]     = useState([]);
     const [loading, setLoading]         = useState(true);
-    const [filter, setFilter]           = useState('All');   // 'All' | status
+    const [filter, setFilter]           = useState(canCreateProject ? 'All' : 'Assigned to Me');
 
     // Modals
     const [projectModal, setProjectModal] = useState(false);
@@ -416,6 +478,7 @@ const ProjectManagement = () => {
     // Create project
     const handleCreateProject = async (e) => {
         e.preventDefault();
+        if (!canCreateProject) return;
         setSubmitting(true);
         try {
             const res = await fetch(`${API}/projects`, {
@@ -473,17 +536,66 @@ const ProjectManagement = () => {
         }
     };
 
+    // Update Task Status
+    const handleUpdateTaskStatus = async (taskId, newStatus) => {
+        try {
+            const res = await fetch(`${API}/project-tasks/${taskId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus }),
+            });
+            if (res.ok) {
+                setTaskMap(prev => {
+                    const next = { ...prev };
+                    Object.keys(next).forEach(pid => {
+                        next[pid] = next[pid].map(t => (t.id === taskId || t._id === taskId) ? { ...t, status: newStatus } : t);
+                    });
+                    return next;
+                });
+            }
+        } catch (err) {
+            console.error('Error updating task status:', err);
+        }
+    };
+
+    // Update Project Status
+    const handleUpdateProjectStatus = async (projectId, newStatus) => {
+        try {
+            const res = await fetch(`${API}/projects/${projectId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus }),
+            });
+            if (res.ok) {
+                setProjects(prev => prev.map(p => p.id === projectId ? { ...p, status: newStatus } : p));
+            }
+        } catch (err) {
+            console.error('Error updating project status:', err);
+        }
+    };
+
     const openTaskModal = (project) => {
         setTargetProject(project);
         setTaskModal(true);
     };
 
     // Filtered list
-    const displayed = filter === 'All' ? projects : projects.filter(p => (p.status || 'Active') === filter);
+    const myId = String(user?.empId || user?.id);
+    const displayed = projects.filter(p => {
+        if (filter === 'Assigned to Me') {
+            return p.teamMembers?.some(m => String(m.id) === myId) || (taskMap[p.id] || []).some(t => String(t.assignedTo) === myId);
+        }
+        if (filter === 'All' || filter === 'All Projects') return true;
+        return (p.status || 'Active') === filter;
+    });
 
     // Summary stats
     const totalTasks = Object.values(taskMap).flat().length;
     const doneTasks  = Object.values(taskMap).flat().filter(t => t.status === 'Completed').length;
+
+    const filterTabs = canCreateProject
+        ? ['All', 'Active', 'On Hold', 'Completed']
+        : ['Assigned to Me', 'All Projects', 'Active', 'Completed'];
 
     return (
         <>
@@ -522,20 +634,32 @@ const ProjectManagement = () => {
                         </p>
                     </div>
 
-                    <button onClick={() => setProjectModal(true)} style={{
-                        padding: '11px 22px', borderRadius: 12, border: 'none', cursor: 'pointer',
-                        background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff',
-                        fontSize: 14, fontWeight: 600, boxShadow: '0 4px 14px rgba(79,70,229,0.35)',
-                        display: 'flex', alignItems: 'center', gap: 8, transition: 'opacity 0.15s, transform 0.15s',
-                    }}
-                    onMouseOver={e => e.currentTarget.style.opacity = '0.9'}
-                    onMouseOut={e => e.currentTarget.style.opacity = '1'}
-                    >
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-                        </svg>
-                        New Project
-                    </button>
+                    {canCreateProject ? (
+                        <button onClick={() => setProjectModal(true)} style={{
+                            padding: '11px 22px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                            background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff',
+                            fontSize: 14, fontWeight: 600, boxShadow: '0 4px 14px rgba(79,70,229,0.35)',
+                            display: 'flex', alignItems: 'center', gap: 8, transition: 'opacity 0.15s, transform 0.15s',
+                        }}
+                        onMouseOver={e => e.currentTarget.style.opacity = '0.9'}
+                        onMouseOut={e => e.currentTarget.style.opacity = '1'}
+                        >
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                            </svg>
+                            New Project
+                        </button>
+                    ) : (
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: 8,
+                            padding: '8px 16px', borderRadius: 12,
+                            background: 'rgba(79,70,229,0.08)', color: '#4f46e5',
+                            fontSize: 13, fontWeight: 600, border: '1px solid rgba(79,70,229,0.18)'
+                        }}>
+                            <i className="bi bi-person-check-fill"></i>
+                            Assigned Workspace
+                        </div>
+                    )}
                 </div>
 
                 {/* ── Stat cards ── */}
@@ -561,8 +685,8 @@ const ProjectManagement = () => {
 
                 {/* ── Filter tabs ── */}
                 {projects.length > 0 && (
-                    <div style={{ display: 'flex', gap: 6, marginBottom: 22 }}>
-                        {['All', 'Active', 'On Hold', 'Completed'].map(f => (
+                    <div style={{ display: 'flex', gap: 6, marginBottom: 22, flexWrap: 'wrap' }}>
+                        {filterTabs.map(f => (
                             <button key={f} onClick={() => setFilter(f)} style={{
                                 padding: '6px 14px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500,
                                 background: filter === f ? '#4f46e5' : 'var(--card-bg, #fff)',
@@ -584,7 +708,7 @@ const ProjectManagement = () => {
                 ) : (
                     <div className="pm-grid">
                         {displayed.length === 0
-                            ? <EmptyState onNew={() => setProjectModal(true)} />
+                            ? <EmptyState onNew={() => setProjectModal(true)} canCreateProject={canCreateProject} />
                             : displayed.map(p => (
                                 <ProjectCard
                                     key={p.id}
@@ -592,12 +716,17 @@ const ProjectManagement = () => {
                                     tasks={taskMap[p.id] || []}
                                     employees={employees}
                                     onAddTask={openTaskModal}
+                                    onUpdateTaskStatus={handleUpdateTaskStatus}
+                                    onUpdateProjectStatus={handleUpdateProjectStatus}
+                                    user={user}
+                                    canCreateProject={canCreateProject}
                                 />
                             ))
                         }
                     </div>
                 )}
             </div>
+
 
             {/* ══ Create Project Modal ══ */}
             <Modal show={projectModal} onClose={() => setProjectModal(false)} title="New Project" subtitle="Define scope, stack, and build your team" width={700}>

@@ -1,4 +1,4 @@
-﻿/* Minimal Auth Screen */
+/* Minimal Auth Screen */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 :root {
@@ -65,6 +65,10 @@
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+.hero-logo img {
+  animation: float 3.5s ease-in-out infinite;
 }
 
 .hero-title {
@@ -269,6 +273,18 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+  100% {
+    transform: translateY(0px);
   }
 }
 

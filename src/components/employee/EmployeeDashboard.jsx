@@ -5,6 +5,11 @@ import { useTheme } from "../../context/ThemeContext";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import SuccessModal from "../common/SuccessModal";
 import WebcamMonitor from "./WebcamMonitor";
+import {
+  PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip,
+  ResponsiveContainer, AreaChart, Area, CartesianGrid, Legend,
+  LineChart, Line
+} from 'recharts';
 
 const EmployeeDashboard = () => {
   const { user, logout, logActivity, notifyInactivityAlert, activityLog } = useAuth();
@@ -96,11 +101,23 @@ const EmployeeDashboard = () => {
     const storedLoc = localStorage.getItem("checkInLocation");
 
     if (storedCheckIn === "true" && storedStartTime) {
-      setIsCheckedIn(true);
-      setCheckInTime(new Date(storedStartTime));
-      setLastActivityTime(new Date());
-      setMouseActive(true);
-      if (storedLoc) setLocationAddress(storedLoc);
+      const startTime = new Date(storedStartTime);
+      const today = new Date();
+
+      // If the check-in is from a previous day, clear the local state so they aren't stuck
+      if (startTime.toDateString() !== today.toDateString()) {
+        localStorage.removeItem("isActiveCheckIn");
+        localStorage.removeItem("checkInTime");
+        localStorage.removeItem("checkInLocation");
+        setIsCheckedIn(false);
+        setCheckInTime(null);
+      } else {
+        setIsCheckedIn(true);
+        setCheckInTime(startTime);
+        setLastActivityTime(new Date());
+        setMouseActive(true);
+        if (storedLoc) setLocationAddress(storedLoc);
+      }
     }
 
     calculateStats();
@@ -385,10 +402,30 @@ const EmployeeDashboard = () => {
   const hasCheckedOutToday = todayActivity.some(log => log.action === 'CHECK_OUT' || log.action === 'AUTO_CHECK_OUT');
 
   const breakCount = todayActivity.filter(log => log.action === 'START_BREAK').length;
-  // Determine if currently on break (latest break action)
   const breakStarts = todayActivity.filter(log => log.action === 'START_BREAK').length;
   const breakEnds = todayActivity.filter(log => log.action === 'END_BREAK').length;
   const isOnBreak = breakStarts > breakEnds;
+
+  // Calculate live break time remaining
+  const lastBreakStartLog = [...todayActivity].reverse().find(log => log.action === 'START_BREAK');
+  let breakTimeRemainingStr = null;
+  let isBreakOverdue = false;
+
+  if (isOnBreak && lastBreakStartLog) {
+    const breakStart = new Date(lastBreakStartLog.timestamp);
+    const elapsedSeconds = Math.floor((currentTime - breakStart) / 1000);
+    const timeLimitSeconds = 30 * 60; // 30 minutes limit
+    const remainingSeconds = timeLimitSeconds - elapsedSeconds;
+
+    if (remainingSeconds <= 0) {
+      isBreakOverdue = true;
+      breakTimeRemainingStr = "Overdue!";
+    } else {
+      const m = Math.floor(remainingSeconds / 60);
+      const s = remainingSeconds % 60;
+      breakTimeRemainingStr = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+  }
 
   const handleStartBreak = () => {
     if (breakCount >= 2) {
@@ -414,6 +451,63 @@ const EmployeeDashboard = () => {
       longitude: locationCoords?.longitude,
     });
     alert(`Break ended. Welcome back!`);
+  };
+
+  // Calculate Today's Timeline Events
+  const todayLogs = activityLog?.filter(log =>
+    log.userId === user?.empId &&
+    new Date(log.timestamp).toDateString() === todayStr
+  ).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)) || [];
+
+  // Calculate Past 7 Days Records for Daily Record Tracking
+  const getRecentDailyRecords = () => {
+    const records = [];
+    const now = new Date();
+    for (let i = 0; i < 7; i++) {
+      const d = new Date();
+      d.setDate(now.getDate() - i);
+      const dStr = d.toDateString();
+      const dayLogs = activityLog?.filter(log =>
+        log.userId === user?.empId &&
+        new Date(log.timestamp).toDateString() === dStr
+      ).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)) || [];
+
+      const checkInLog = dayLogs.find(l => l.action === 'CHECK_IN');
+      const checkOutLog = [...dayLogs].reverse().find(l => l.action === 'CHECK_OUT' || l.action === 'AUTO_CHECK_OUT');
+      const breaksCount = dayLogs.filter(l => l.action === 'START_BREAK').length;
+
+      let totalMs = 0;
+      let tempIn = null;
+      dayLogs.forEach(l => {
+        if (l.action === 'CHECK_IN') tempIn = new Date(l.timestamp).getTime();
+        else if ((l.action === 'CHECK_OUT' || l.action === 'AUTO_CHECK_OUT') && tempIn) {
+          totalMs += (new Date(l.timestamp).getTime() - tempIn);
+          tempIn = null;
+        }
+      });
+
+      const isToday = dStr === todayStr;
+      if (isToday && isCheckedIn && checkInTime) {
+        totalMs += Math.max(0, currentTime.getTime() - checkInTime.getTime());
+      }
+
+      const hours = (totalMs / (1000 * 60 * 60)).toFixed(1);
+      const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+
+      if (checkInLog || isToday || !isWeekend) {
+        records.push({
+          date: d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+          isToday,
+          checkIn: checkInLog ? formatTime(new Date(checkInLog.timestamp)) : (isToday && isCheckedIn ? formatTime(checkInTime) : '--:--'),
+          checkOut: checkOutLog ? formatTime(new Date(checkOutLog.timestamp)) : (isToday && isCheckedIn ? 'In Progress' : (checkInLog ? 'Active' : '--:--')),
+          breaks: breaksCount,
+          hours: `${hours} hrs`,
+          status: isToday && isCheckedIn ? 'Active' : (checkInLog ? 'Present' : (isWeekend ? 'Weekend' : 'Absent')),
+          location: checkInLog?.details?.replace('Checked In from ', '') || (isToday ? locationAddress : '--')
+        });
+      }
+    }
+    return records;
   };
 
   return (
@@ -496,8 +590,8 @@ const EmployeeDashboard = () => {
             </button>
           )}
           {isOnBreak && (
-            <button className="btn btn-info px-4 py-2 text-white" onClick={handleEndBreak}>
-              <i className="bi bi-play-circle me-2"></i> END BREAK
+            <button className={`btn ${isBreakOverdue ? 'btn-danger' : 'btn-info text-white'} px-4 py-2`} onClick={handleEndBreak}>
+              <i className="bi bi-play-circle me-2"></i> END BREAK {breakTimeRemainingStr ? `(${breakTimeRemainingStr})` : ''}
             </button>
           )}
           {hasCheckedInToday && !hasCheckedOutToday && !isOnBreak && (
@@ -624,6 +718,129 @@ const EmployeeDashboard = () => {
           </div>
         </div>
 
+        {/* Daily Record & Tracking Section */}
+        <div className="col-12">
+          <div className="card shadow-sm border-0" style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px' }}>
+            <div className="card-header border-0 pt-4 px-4 d-flex justify-content-between align-items-center" style={{ backgroundColor: 'transparent' }}>
+              <h5 className="card-title mb-0" style={{ color: 'var(--text-main)', fontWeight: 'bold' }}>
+                <i className="bi bi-clock-history me-2 text-primary"></i>Daily Work & Attendance Records
+              </h5>
+              <div className="d-flex align-items-center gap-2">
+                <span className="badge bg-success bg-opacity-10 text-success px-3 py-2" style={{ fontSize: '0.78rem' }}>
+                  <i className="bi bi-shield-check me-1"></i>Auto Tracking Active
+                </span>
+              </div>
+            </div>
+            <div className="card-body px-4 pb-4">
+              <div className="row g-4">
+
+                {/* Left: Today's Live Activity Timeline */}
+                <div className="col-lg-5">
+                  <div className="p-3 rounded-3 h-100" style={{ backgroundColor: 'var(--bg-main)', border: '1px solid var(--glass-border)' }}>
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <h6 className="fw-bold mb-0" style={{ color: 'var(--text-main)', fontSize: '0.9rem' }}>
+                        <i className="bi bi-geo-alt me-1 text-danger"></i> Today's Timeline Log
+                      </h6>
+                      <span className="badge bg-secondary bg-opacity-10 text-secondary" style={{ fontSize: '0.75rem' }}>
+                        {todayLogs.length} events today
+                      </span>
+                    </div>
+
+                    <div style={{ maxHeight: '240px', overflowY: 'auto', paddingRight: '4px' }}>
+                      {todayLogs.length === 0 ? (
+                        <div className="text-center text-muted py-4">
+                          <i className="bi bi-calendar-x fs-2 d-block opacity-25 mb-1"></i>
+                          No activity logged today yet. Check in to begin tracking.
+                        </div>
+                      ) : (
+                        <div className="timeline-list d-flex flex-column gap-2">
+                          {todayLogs.map((log, idx) => {
+                            const isCheckIn = log.action === 'CHECK_IN';
+                            const isCheckOut = log.action === 'CHECK_OUT' || log.action === 'AUTO_CHECK_OUT';
+                            const isBreak = log.action === 'START_BREAK' || log.action === 'END_BREAK';
+
+                            const badgeColor = isCheckIn ? '#10b981' : isCheckOut ? '#ef4444' : isBreak ? '#f59e0b' : '#8b5cf6';
+                            const icon = isCheckIn ? 'bi-box-arrow-in-right' : isCheckOut ? 'bi-box-arrow-right' : isBreak ? 'bi-cup-hot' : 'bi-exclamation-triangle';
+
+                            return (
+                              <div key={idx} className="p-2 rounded border d-flex align-items-center justify-content-between" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--glass-border)' }}>
+                                <div className="d-flex align-items-center gap-2">
+                                  <div style={{ width: 28, height: 28, borderRadius: 8, background: `${badgeColor}18`, color: badgeColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <i className={`bi ${icon}`} style={{ fontSize: '0.85rem' }}></i>
+                                  </div>
+                                  <div>
+                                    <div className="fw-semibold" style={{ fontSize: '0.82rem', color: 'var(--text-main)' }}>
+                                      {log.action.replace(/_/g, ' ')}
+                                    </div>
+                                    <small className="text-muted" style={{ fontSize: '0.72rem', display: 'block', maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                      {log.details || 'System event recorded'}
+                                    </small>
+                                  </div>
+                                </div>
+                                <span className="badge bg-light text-dark border" style={{ fontSize: '0.72rem' }}>
+                                  {formatTime(new Date(log.timestamp))}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right: Recent Daily Records Table */}
+                <div className="col-lg-7">
+                  <div className="p-3 rounded-3 h-100" style={{ backgroundColor: 'var(--bg-main)', border: '1px solid var(--glass-border)' }}>
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <h6 className="fw-bold mb-0" style={{ color: 'var(--text-main)', fontSize: '0.9rem' }}>
+                        <i className="bi bi-calendar3 me-1 text-primary"></i> Daily Attendance Summary (Recent)
+                      </h6>
+                      <span className="small text-muted" style={{ fontSize: '0.75rem' }}>7 Days History</span>
+                    </div>
+
+                    <div className="table-responsive" style={{ maxHeight: '240px', overflowY: 'auto' }}>
+                      <table className="table table-sm table-hover mb-0 align-middle" style={{ fontSize: '0.8rem', color: 'var(--text-main)' }}>
+                        <thead style={{ borderBottom: '1.5px solid var(--glass-border)', color: 'var(--text-muted)' }}>
+                          <tr>
+                            <th>Date</th>
+                            <th>In</th>
+                            <th>Out</th>
+                            <th>Breaks</th>
+                            <th>Work Time</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {getRecentDailyRecords().map((rec, i) => (
+                            <tr key={i} style={{ borderBottom: '1px solid var(--glass-border)' }}>
+                              <td className="fw-semibold">
+                                {rec.date} {rec.isToday && <span className="badge bg-primary ms-1" style={{ fontSize: '0.65rem' }}>Today</span>}
+                              </td>
+                              <td>{rec.checkIn}</td>
+                              <td>{rec.checkOut}</td>
+                              <td>
+                                <span className="badge bg-warning bg-opacity-10 text-warning">{rec.breaks} / 2</span>
+                              </td>
+                              <td className="fw-bold text-primary">{rec.hours}</td>
+                              <td>
+                                <span className={`badge ${rec.status === 'Active' ? 'bg-success' : rec.status === 'Present' ? 'bg-info text-white' : rec.status === 'Weekend' ? 'bg-secondary' : 'bg-danger'}`}>
+                                  {rec.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Monthly Summary moved to next row */}
         <div className="col-12">
           <div className="card h-100 shadow-sm border-0" style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px' }}>
@@ -698,6 +915,251 @@ const EmployeeDashboard = () => {
                     <i className="bi bi-hourglass-split text-warning fs-4 mt-2"></i>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Analytics Section - Clean 2x2 Grid */}
+        <div className="col-12">
+          <div className="card shadow-sm border-0 mb-3" style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px' }}>
+            <div className="card-header border-0 pt-4 px-4 d-flex justify-content-between align-items-center" style={{ backgroundColor: 'transparent' }}>
+              <h5 className="card-title mb-0" style={{ color: 'var(--text-main)', fontWeight: 'bold' }}>
+                <i className="bi bi-graph-up me-2"></i>Analytics & Insights
+              </h5>
+              <span className="badge bg-primary bg-opacity-10 text-primary px-3 py-2" style={{ fontSize: '0.78rem' }}>
+                {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}
+              </span>
+            </div>
+            <div className="card-body px-4 pb-4">
+              <div className="row g-4">
+
+                {/* 1. Attendance Donut - Pie Chart */}
+                <div className="col-md-6">
+                  <div className="p-4 rounded-3 h-100" style={{ backgroundColor: 'var(--bg-main)', border: '1px solid var(--glass-border)' }}>
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <h6 className="fw-bold mb-0" style={{ color: 'var(--text-main)', fontSize: '0.9rem' }}>
+                        <i className="bi bi-pie-chart me-2" style={{ color: '#10b981' }}></i>Monthly Attendance
+                      </h6>
+                    </div>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <PieChart>
+                        <Pie
+                          data={(() => {
+                            const now = new Date();
+                            const totalDaysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+                            const daysPassed = now.getDate();
+                            let workingDaysPassed = 0;
+                            for (let d = 1; d <= daysPassed; d++) {
+                              const day = new Date(now.getFullYear(), now.getMonth(), d).getDay();
+                              if (day !== 0 && day !== 6) workingDaysPassed++;
+                            }
+                            const present = stats.presentDays;
+                            const absent = Math.max(0, workingDaysPassed - present);
+                            let remaining = 0;
+                            for (let d = daysPassed + 1; d <= totalDaysInMonth; d++) {
+                              const day = new Date(now.getFullYear(), now.getMonth(), d).getDay();
+                              if (day !== 0 && day !== 6) remaining++;
+                            }
+                            return [
+                              { name: 'Present', value: present || 0 },
+                              { name: 'Absent', value: absent || 0 },
+                              { name: 'Upcoming', value: remaining || 0 },
+                            ];
+                          })()}
+                          cx="50%" cy="50%" innerRadius={55} outerRadius={85}
+                          paddingAngle={4} dataKey="value" strokeWidth={0}
+                        >
+                          <Cell fill="#10b981" />
+                          <Cell fill="#ef4444" />
+                          <Cell fill="#475569" />
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--glass-border)', borderRadius: '10px', color: 'var(--text-main)', fontSize: '0.85rem' }}
+                          formatter={(value, name) => [`${value} days`, name]}
+                        />
+                        <Legend
+                          verticalAlign="bottom"
+                          iconType="circle"
+                          iconSize={8}
+                          wrapperStyle={{ fontSize: '0.78rem', paddingTop: '12px' }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* 2. Daily Hours - Line Chart with gradient */}
+                <div className="col-md-6">
+                  <div className="p-4 rounded-3 h-100" style={{ backgroundColor: 'var(--bg-main)', border: '1px solid var(--glass-border)' }}>
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <h6 className="fw-bold mb-0" style={{ color: 'var(--text-main)', fontSize: '0.9rem' }}>
+                        <i className="bi bi-activity me-2" style={{ color: '#6366f1' }}></i>Daily Working Hours
+                      </h6>
+                      <span className="small" style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>This month</span>
+                    </div>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <AreaChart data={(() => {
+                        const now = new Date();
+                        const currentMonth = now.getMonth();
+                        const currentYear = now.getFullYear();
+                        const daysPassed = now.getDate();
+                        const data = [];
+                        for (let d = 1; d <= daysPassed; d++) {
+                          const date = new Date(currentYear, currentMonth, d);
+                          if (date.getDay() === 0 || date.getDay() === 6) continue;
+                          const dateStr = date.toDateString();
+                          const dayLogs = activityLog?.filter(log =>
+                            log.userId === user?.empId &&
+                            new Date(log.timestamp).toDateString() === dateStr
+                          ).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)) || [];
+                          let totalMs = 0, tempIn = null;
+                          dayLogs.forEach(log => {
+                            if (log.action === 'CHECK_IN') tempIn = new Date(log.timestamp).getTime();
+                            else if ((log.action === 'CHECK_OUT' || log.action === 'AUTO_CHECK_OUT') && tempIn) {
+                              totalMs += new Date(log.timestamp).getTime() - tempIn;
+                              tempIn = null;
+                            }
+                          });
+                          data.push({
+                            day: `${d}`,
+                            hours: parseFloat((totalMs / (1000 * 60 * 60)).toFixed(1))
+                          });
+                        }
+                        return data;
+                      })()}>
+                        <defs>
+                          <linearGradient id="gradientHours" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.25} />
+                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" vertical={false} />
+                        <XAxis dataKey="day" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} unit="h" />
+                        <Tooltip
+                          contentStyle={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--glass-border)', borderRadius: '10px', color: 'var(--text-main)', fontSize: '0.85rem' }}
+                          formatter={(value) => [`${value} hrs`, 'Worked']}
+                        />
+                        <Area type="monotone" dataKey="hours" stroke="#6366f1" strokeWidth={2.5} fill="url(#gradientHours)" dot={{ r: 3, fill: '#6366f1', strokeWidth: 0 }} activeDot={{ r: 5 }} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* 3. Check-in Time Distribution - Horizontal Bar */}
+                <div className="col-md-6">
+                  <div className="p-4 rounded-3 h-100" style={{ backgroundColor: 'var(--bg-main)', border: '1px solid var(--glass-border)' }}>
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <h6 className="fw-bold mb-0" style={{ color: 'var(--text-main)', fontSize: '0.9rem' }}>
+                        <i className="bi bi-clock-history me-2" style={{ color: '#f59e0b' }}></i>Check-in Timing
+                      </h6>
+                      <span className="small" style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>This month</span>
+                    </div>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <BarChart layout="vertical" data={(() => {
+                        const now = new Date();
+                        const currentMonth = now.getMonth();
+                        const currentYear = now.getFullYear();
+                        const buckets = [
+                          { slot: 'Before 9 AM', count: 0, fill: '#10b981' },
+                          { slot: '9 - 10 AM', count: 0, fill: '#3b82f6' },
+                          { slot: '10 - 11 AM', count: 0, fill: '#f59e0b' },
+                          { slot: '11 AM - 12 PM', count: 0, fill: '#f97316' },
+                          { slot: 'After 12 PM', count: 0, fill: '#ef4444' },
+                        ];
+                        const checkIns = activityLog?.filter(log =>
+                          log.userId === user?.empId &&
+                          log.action === 'CHECK_IN' &&
+                          new Date(log.timestamp).getMonth() === currentMonth &&
+                          new Date(log.timestamp).getFullYear() === currentYear
+                        ) || [];
+                        checkIns.forEach(log => {
+                          const hr = new Date(log.timestamp).getHours();
+                          if (hr < 9) buckets[0].count++;
+                          else if (hr < 10) buckets[1].count++;
+                          else if (hr < 11) buckets[2].count++;
+                          else if (hr < 12) buckets[3].count++;
+                          else buckets[4].count++;
+                        });
+                        return buckets;
+                      })()}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" horizontal={false} />
+                        <XAxis type="number" allowDecimals={false} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
+                        <YAxis type="category" dataKey="slot" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} width={90} axisLine={false} tickLine={false} />
+                        <Tooltip
+                          contentStyle={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--glass-border)', borderRadius: '10px', color: 'var(--text-main)', fontSize: '0.85rem' }}
+                          formatter={(value) => [`${value} days`, 'Check-ins']}
+                        />
+                        <Bar dataKey="count" radius={[0, 6, 6, 0]} barSize={18}>
+                          {(() => {
+                            const fills = ['#10b981', '#3b82f6', '#f59e0b', '#f97316', '#ef4444'];
+                            return fills.map((color, i) => <Cell key={i} fill={color} />);
+                          })()}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* 4. Weekly Productivity Trend - Multi-line Chart */}
+                <div className="col-md-6">
+                  <div className="p-4 rounded-3 h-100" style={{ backgroundColor: 'var(--bg-main)', border: '1px solid var(--glass-border)' }}>
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <h6 className="fw-bold mb-0" style={{ color: 'var(--text-main)', fontSize: '0.9rem' }}>
+                        <i className="bi bi-graph-up-arrow me-2" style={{ color: '#10b981' }}></i>Weekly Productivity
+                      </h6>
+                      <span className="small" style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Last 4 weeks</span>
+                    </div>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <LineChart data={(() => {
+                        const data = [];
+                        for (let w = 3; w >= 0; w--) {
+                          let weekHrs = 0;
+                          let daysWorked = 0;
+                          for (let d = 0; d < 7; d++) {
+                            const date = new Date();
+                            date.setDate(date.getDate() - (w * 7 + (6 - d)));
+                            const dateStr = date.toDateString();
+                            const dayLogs = activityLog?.filter(log =>
+                              log.userId === user?.empId &&
+                              new Date(log.timestamp).toDateString() === dateStr
+                            ).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)) || [];
+                            let tempIn = null;
+                            let dayMs = 0;
+                            dayLogs.forEach(log => {
+                              if (log.action === 'CHECK_IN') tempIn = new Date(log.timestamp).getTime();
+                              else if ((log.action === 'CHECK_OUT' || log.action === 'AUTO_CHECK_OUT') && tempIn) {
+                                dayMs += new Date(log.timestamp).getTime() - tempIn;
+                                tempIn = null;
+                              }
+                            });
+                            if (dayMs > 0) daysWorked++;
+                            weekHrs += dayMs;
+                          }
+                          data.push({
+                            week: `W${4 - w}`,
+                            hours: parseFloat((weekHrs / (1000 * 60 * 60)).toFixed(1)),
+                            days: daysWorked,
+                            avgPerDay: daysWorked > 0 ? parseFloat((weekHrs / (1000 * 60 * 60) / daysWorked).toFixed(1)) : 0
+                          });
+                        }
+                        return data;
+                      })()}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" vertical={false} />
+                        <XAxis dataKey="week" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
+                        <Tooltip
+                          contentStyle={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--glass-border)', borderRadius: '10px', color: 'var(--text-main)', fontSize: '0.85rem' }}
+                        />
+                        <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '0.75rem', paddingTop: '8px' }} />
+                        <Line type="monotone" dataKey="hours" stroke="#6366f1" strokeWidth={2.5} dot={{ r: 4, fill: '#6366f1', strokeWidth: 0 }} name="Total Hrs" />
+                        <Line type="monotone" dataKey="avgPerDay" stroke="#10b981" strokeWidth={2.5} strokeDasharray="5 5" dot={{ r: 4, fill: '#10b981', strokeWidth: 0 }} name="Avg/Day" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>

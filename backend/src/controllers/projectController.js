@@ -35,5 +35,19 @@ export const getProjectsWithTasks = asyncHandler(async (req, res) => {
     })
   );
 
-  res.json(combined);
-});
+// PUT /api/projects/:id
+export const updateProject = asyncHandler(async (req, res) => {
+  const cid = req.params.id;
+  const numId = Number(cid);
+  const query = isNaN(numId) ? { $or: [{ id: cid }, { _id: cid }] } : { $or: [{ id: numId }, { id: cid }] };
+  
+  const updated = await Project.findOneAndUpdate(
+    query,
+    { $set: req.body },
+    { new: true }
+  );
+  if (!updated) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  res.json(updated);
+});
