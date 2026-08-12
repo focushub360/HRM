@@ -9,6 +9,6 @@ git pull origin main
 npm install
 
 # Restart PM2 process
-pm2 restart hrms-backend --update-env
+pm2 restart ecosystem.config.cjs --update-env
 
 echo "Backend deployment finished successfully!"
