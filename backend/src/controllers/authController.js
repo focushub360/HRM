@@ -49,7 +49,7 @@ const findEmployeeMatch = async (email, password) => {
     ...employee.toJSON(),
     type: 'employee',
     companyId: employee.companyId,
-    role: 'employee'
+    role: employee.role || 'employee'
   };
 };
 
@@ -67,6 +67,8 @@ export const login = asyncHandler(async (req, res) => {
   if (!email || !password) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
+
+
 
   // ---------- Universal login (no type provided) ----------
   if (!type) {

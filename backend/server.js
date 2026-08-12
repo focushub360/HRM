@@ -8,6 +8,7 @@ import app from './src/app.js';
 import connectDB from './src/config/db.js';
 import { registerSocketHandlers } from './src/socket/index.js';
 import { startWeeklyCleanupScheduler } from './src/utils/scheduler.js';
+import { initAttendanceCron } from './src/cron/attendanceCron.js';
 
 const PORT = process.env.PORT || 5000;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -29,6 +30,7 @@ const start = async () => {
   app.set('io', io);
   registerSocketHandlers(io);
   startWeeklyCleanupScheduler();
+  initAttendanceCron();
 
   httpServer.listen(PORT, HOST, () => {
     console.log(`✅ HRMS Backend Server running on http://${HOST}:${PORT}`);

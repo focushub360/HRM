@@ -243,7 +243,7 @@ export const AuthProvider = ({ children }) => {
       setCompanies((prev) =>
         prev.map((c) => {
           if (c.id === parseInt(companyId)) {
-            return { ...c, hrAccounts: [...c.hrAccounts, result.hrAccount], hrCount: c.hrAccounts.length + 1 };
+            return { ...c, hrAccounts: [...(c.hrAccounts || []), result.hrAccount], hrCount: (c.hrAccounts || []).length + 1 };
           }
           return c;
         })
@@ -272,7 +272,7 @@ export const AuthProvider = ({ children }) => {
       setCompanies((prev) =>
         prev.map((c) => {
           if (c.id === parseInt(companyId)) {
-            return { ...c, employeeAccounts: [...c.employeeAccounts, result.employeeAccount], employees: c.employeeAccounts.length + 1 };
+            return { ...c, employeeAccounts: [...(c.employeeAccounts || []), result.employeeAccount], employees: (c.employeeAccounts || []).length + 1 };
           }
           return c;
         })
@@ -310,7 +310,7 @@ export const AuthProvider = ({ children }) => {
       setCompanies((prev) =>
         prev.map((c) => {
           if (c.id === parseInt(companyId)) {
-            return { ...c, hrAccounts: c.hrAccounts.filter((hr) => hr.id !== hrId), hrCount: c.hrAccounts.length - 1 };
+            return { ...c, hrAccounts: (c.hrAccounts || []).filter((hr) => hr.id !== hrId), hrCount: Math.max(0, (c.hrAccounts || []).length - 1) };
           }
           return c;
         })
@@ -337,7 +337,7 @@ export const AuthProvider = ({ children }) => {
           if (c.id === parseInt(companyId)) {
             return {
               ...c,
-              hrAccounts: c.hrAccounts.map(hr => hr.id === parseInt(hrId) ? { ...hr, status } : hr)
+              hrAccounts: (c.hrAccounts || []).map(hr => hr.id === parseInt(hrId) ? { ...hr, status } : hr)
             };
           }
           return c;
@@ -361,7 +361,7 @@ export const AuthProvider = ({ children }) => {
       setCompanies((prev) =>
         prev.map((c) => {
           if (c.id === parseInt(companyId)) {
-            return { ...c, employeeAccounts: c.employeeAccounts.filter((e) => e.id !== employeeId), employees: c.employeeAccounts.length - 1 };
+            return { ...c, employeeAccounts: (c.employeeAccounts || []).filter((e) => e.id !== employeeId), employees: Math.max(0, (c.employeeAccounts || []).length - 1) };
           }
           return c;
         })
@@ -388,7 +388,7 @@ export const AuthProvider = ({ children }) => {
           if (c.id === parseInt(companyId)) {
             return {
               ...c,
-              employeeAccounts: c.employeeAccounts.map((e) =>
+              employeeAccounts: (c.employeeAccounts || []).map((e) =>
                 e.id === parseInt(employeeId) ? { ...e, ...updatedEmployee } : e
               )
             };
@@ -683,31 +683,38 @@ export const AuthProvider = ({ children }) => {
   const hasPermission = (permission) => {
     if (!user) return false;
 
-    // Company Admin has all permissions
+    // Company Admin has all permissions globally (can see Company Management)
     if (user.type === 'company') return true;
+
+    const hrPermissions = [
+      'view_dashboard',
+      'manage_users', // Activity Reports
+      'manage_employees', // Employees
+      'manage_leaves', // Added for Leave Management
+      'manage_attendance', // Added for HR Attendance view
+      'monitor_employees', // Live Tracking
+      'view_attendance',
+      'manage_payroll',
+      'view_reports',
+      'chat',
+      'feed',
+      'recognition',
+      'events',
+      'manage_projects' // Allow HR and PM to manage projects
+    ];
 
     // HR Permissions
     if (user.type === 'hr') {
-      const hrPermissions = [
-        'view_dashboard',
-        'manage_users', // Activity Reports
-        'manage_employees', // Employees
-        'manage_leaves', // Added for Leave Management
-        'manage_attendance', // Added for HR Attendance view
-        'monitor_employees', // Live Tracking
-        'view_attendance',
-        'manage_payroll',
-        'view_reports',
-        'chat',
-        'feed',
-        'recognition',
-        'events'
-      ];
       return hrPermissions.includes(permission);
     }
 
     // Employee Permissions
     if (user.type === 'employee') {
+      // If employee is a project manager, they get the same rights as HR
+      if (user.role === 'project_manager') {
+        return hrPermissions.includes(permission);
+      }
+
       const employeePermissions = [
         'view_dashboard',
         'view_attendance',
@@ -716,6 +723,7 @@ export const AuthProvider = ({ children }) => {
         'recognition',
         'events'
       ];
+      
       return employeePermissions.includes(permission);
     }
 

@@ -22,10 +22,15 @@ const employeeSchema = new mongoose.Schema(
     email: { type: String, required: true },
     empId: { type: String, index: true },
     password: { type: String, required: true },
+    role: { type: String, default: 'employee' },
     employeeType: { type: String, default: 'office' },
     department: { type: String, default: 'Unassigned' },
     position: { type: String, default: 'TBD' },
     joiningDate: { type: String, default: null },
+    shift: {
+      startTime: { type: String, default: '09:00' },
+      endTime: { type: String, default: '18:00' }
+    },
     salary: { type: Number, default: null },
     reportingManager: { type: String, default: null },
     aadharDoc: { type: String, default: null },

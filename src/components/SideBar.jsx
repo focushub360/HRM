@@ -107,8 +107,8 @@ const SideBar = () => {
     if (!user) return "";
     const labels = {
       hr: "HR Manager",
-      employee: `${user.employeeType || "Employee"} Employee`,
-      company: "Company Admin",
+      employee: user.role === 'project_manager' ? "Project Manager" : `${user.employeeType || "Employee"} Employee`,
+      company: "Company Admin"
     };
     return labels[user.type] || "User";
   };

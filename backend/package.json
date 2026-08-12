@@ -9,7 +9,12 @@
     "dev": "nodemon server.js",
     "seed": "node src/utils/seed.js"
   },
-  "keywords": ["hrms", "express", "mongodb", "nodejs"],
+  "keywords": [
+    "hrms",
+    "express",
+    "mongodb",
+    "nodejs"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
@@ -19,6 +24,7 @@
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.5.1",
+    "node-cron": "^4.6.0",
     "socket.io": "^4.7.5",
     "uuid": "^9.0.1"
   },

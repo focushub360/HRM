@@ -1,8 +1,10 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./CompanyManagement.css";
 import { useAuth } from "../../context/AuthContext";
 
 const CompanyManagement = () => {
+  const navigate = useNavigate();
   const { companies, addCompany, updateCompany, addHRToCompany, removeCompany, removeHRFromCompany, updateHRStatus } = useAuth();
   const [showAddCompany, setShowAddCompany] = useState(false);
   const [showEditCompany, setShowEditCompany] = useState(false);
@@ -426,6 +428,12 @@ const CompanyManagement = () => {
                   onClick={() => handleEditClick(company)}
                 >
                   <i className="bi bi-pencil"></i> Edit Company
+                </button>
+                <button
+                  className="btn btn-warning w-100 mb-2 fw-bold text-dark"
+                  onClick={() => navigate('/employees/add')}
+                >
+                  <i className="bi bi-person-workspace"></i> Add Employee / PM
                 </button>
                 <button
                   onClick={() => handleDeleteCompany(company.id)}

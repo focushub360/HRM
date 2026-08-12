@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { Link, useNavigate } from "react-router-dom";
 import { useTheme } from "../../context/ThemeContext";
@@ -238,14 +238,15 @@ const EmployeeDashboard = () => {
   const handleCheckIn = () => {
     // Daily Limit Check
     const todayStr = new Date().toDateString();
-    const todayCheckIns = activityLog?.filter(log =>
+    const todayActivity = activityLog?.filter(log =>
       log.userId === user?.empId &&
-      log.action === 'CHECK_IN' &&
       new Date(log.timestamp).toDateString() === todayStr
-    ).length || 0;
+    ) || [];
 
-    if (todayCheckIns >= 2) {
-      alert("Limit Reached: You can only Check In 2 times per day.");
+    const hasCheckedInToday = todayActivity.some(log => log.action === 'CHECK_IN');
+    
+    if (hasCheckedInToday) {
+      alert("Limit Reached: You can only Check In once per day.");
       return;
     }
 
@@ -379,6 +380,47 @@ const EmployeeDashboard = () => {
     return "Good Evening";
   };
 
+  const todayStr = new Date().toDateString();
+  const todayActivity = activityLog?.filter(log => 
+    log.userId === user?.empId && 
+    new Date(log.timestamp).toDateString() === todayStr
+  ) || [];
+
+  const hasCheckedInToday = todayActivity.some(log => log.action === 'CHECK_IN');
+  const hasCheckedOutToday = todayActivity.some(log => log.action === 'CHECK_OUT' || log.action === 'AUTO_CHECK_OUT');
+
+  const breakCount = todayActivity.filter(log => log.action === 'START_BREAK').length;
+  // Determine if currently on break (latest break action)
+  const breakStarts = todayActivity.filter(log => log.action === 'START_BREAK').length;
+  const breakEnds = todayActivity.filter(log => log.action === 'END_BREAK').length;
+  const isOnBreak = breakStarts > breakEnds;
+
+  const handleStartBreak = () => {
+    if (breakCount >= 2) {
+      alert("Limit Reached: You can only take 2 breaks per day.");
+      return;
+    }
+    const now = new Date();
+    logActivity({
+      action: "START_BREAK",
+      details: `Started Break ${breakCount + 1}`,
+      latitude: locationCoords?.latitude,
+      longitude: locationCoords?.longitude,
+    });
+    alert(`Break ${breakCount + 1} started. You have 30 minutes.`);
+  };
+
+  const handleEndBreak = () => {
+    const now = new Date();
+    logActivity({
+      action: "END_BREAK",
+      details: `Ended Break ${breakCount}`,
+      latitude: locationCoords?.latitude,
+      longitude: locationCoords?.longitude,
+    });
+    alert(`Break ended. Welcome back!`);
+  };
+
   return (
     <div className="container-fluid" style={{ display: "flex", flexDirection: "column", padding: "16px 20px", color: 'var(--text-main)', scrollBehavior: 'smooth' }}>
       {/* Top Header */}
@@ -448,13 +490,29 @@ const EmployeeDashboard = () => {
           )}
         </div>
         <div className="d-flex gap-2">
-          {!isCheckedIn ? (
+          {!hasCheckedInToday && !hasCheckedOutToday && (
             <button className="btn btn-success px-4 py-2" onClick={handleCheckIn}>
               <i className="bi bi-play-circle me-2"></i> CHECK IN
             </button>
-          ) : (
+          )}
+          {hasCheckedInToday && !hasCheckedOutToday && !isOnBreak && (
+            <button className="btn btn-warning px-4 py-2" onClick={handleStartBreak}>
+              <i className="bi bi-pause-circle me-2"></i> START BREAK ({2 - breakCount} left)
+            </button>
+          )}
+          {isOnBreak && (
+            <button className="btn btn-info px-4 py-2 text-white" onClick={handleEndBreak}>
+              <i className="bi bi-play-circle me-2"></i> END BREAK
+            </button>
+          )}
+          {hasCheckedInToday && !hasCheckedOutToday && !isOnBreak && (
             <button className="btn btn-danger px-4 py-2" onClick={() => handleCheckOut(false)}>
               <i className="bi bi-stop-circle me-2"></i> CHECK OUT
+            </button>
+          )}
+          {hasCheckedOutToday && (
+            <button className="btn btn-secondary px-4 py-2" disabled>
+              <i className="bi bi-check-circle me-2"></i> COMPLETED FOR TODAY
             </button>
           )}
         </div>

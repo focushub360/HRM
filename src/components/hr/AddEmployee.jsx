@@ -33,6 +33,8 @@ const AddEmployee = () => {
     joiningDate: "",
     salary: "",
     reportingManager: "", // Will store HR ID or Name
+    shiftStartTime: "09:00",
+    shiftEndTime: "18:00",
 
     // Education
     highestQualification: "",
@@ -178,8 +180,13 @@ const AddEmployee = () => {
       assignedCompanyId: selectedCompany,
       status: 'Active',
       registeredDate: new Date().toISOString(),
+      shift: {
+        startTime: formData.shiftStartTime || "09:00",
+        endTime: formData.shiftEndTime || "18:00"
+      },
       // Creating standard user fields for login
       employeeType: formData.department === 'sales' ? 'sales' : 'office', // Simple logic
+      role: formData.role || 'employee',
       password: formData.password, // Use entered password
       // Capture Head HR (Creator) Details
       headHrId: user?.id,
@@ -201,10 +208,10 @@ const AddEmployee = () => {
         firstName: "", lastName: "", email: "", password: "", phone: "", dateOfBirth: "",
         gender: "", nationality: "", street: "", city: "", state: "",
         postalCode: "", country: "", employeeId: "", department: "",
-        position: "", employmentType: "full-time", joiningDate: "", salary: "",
+        position: "", employmentType: "full-time", role: "employee", joiningDate: "", salary: "",
         reportingManager: "", highestQualification: "", university: "",
         graduationYear: "", emergencyContactName: "", emergencyContactPhone: "",
-        emergencyContactRelation: "",
+        emergencyContactRelation: "", shiftStartTime: "09:00", shiftEndTime: "18:00"
       });
       setCertificates([]);
       setAadharFile(null);
@@ -445,7 +452,7 @@ const AddEmployee = () => {
         <div className="form-section">
           <h3 className="section-title"><i className="bi bi-briefcase-fill"></i> Employment Details</h3>
           <div className="row">
-            <div className="col-md-4 mb-3">
+            <div className="col-md-3 mb-3">
               <label className="form-label">Department *</label>
               <select name="department" value={formData.department} onChange={handleInputChange} className={`form-control ${errors.department ? "is-invalid" : ""}`}>
                 <option value="">Select Department</option>
@@ -453,12 +460,19 @@ const AddEmployee = () => {
               </select>
               {errors.department && <div className="invalid-feedback">{errors.department}</div>}
             </div>
-            <div className="col-md-4 mb-3">
+            <div className="col-md-3 mb-3">
               <label className="form-label">Position *</label>
               <input type="text" name="position" value={formData.position} onChange={handleInputChange} className={`form-control ${errors.position ? "is-invalid" : ""}`} />
               {errors.position && <div className="invalid-feedback">{errors.position}</div>}
             </div>
-            <div className="col-md-4 mb-3">
+            <div className="col-md-3 mb-3">
+              <label className="form-label">Role Type</label>
+              <select name="role" value={formData.role || 'employee'} onChange={handleInputChange} className="form-select">
+                <option value="employee">Standard Employee</option>
+                <option value="project_manager">Project Manager (Team Lead)</option>
+              </select>
+            </div>
+            <div className="col-md-3 mb-3">
               <label className="form-label">Joining Date</label>
               <input type="date" name="joiningDate" value={formData.joiningDate} onChange={handleInputChange} className="form-control" />
             </div>
@@ -480,6 +494,16 @@ const AddEmployee = () => {
               <select name="employmentType" value={formData.employmentType} onChange={handleInputChange} className="form-control">
                 <option value="full-time">Full-time</option><option value="part-time">Part-time</option><option value="contract">Contract</option>
               </select>
+            </div>
+          </div>
+          <div className="row">
+            <div className="col-md-6 mb-3">
+              <label className="form-label">Shift Start Time</label>
+              <input type="time" name="shiftStartTime" value={formData.shiftStartTime} onChange={handleInputChange} className="form-control" />
+            </div>
+            <div className="col-md-6 mb-3">
+              <label className="form-label">Shift End Time</label>
+              <input type="time" name="shiftEndTime" value={formData.shiftEndTime} onChange={handleInputChange} className="form-control" />
             </div>
           </div>
         </div>

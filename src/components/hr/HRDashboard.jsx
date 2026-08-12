@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useTheme } from "../../context/ThemeContext.jsx";
 import {
@@ -30,6 +30,9 @@ const HRDashboard = () => {
     name: "",
     email: "",
     employeeType: "office",
+    role: "employee",
+    shiftStartTime: "09:00",
+    shiftEndTime: "18:00",
   });
   const [successModal, setSuccessModal] = useState({ isOpen: false, title: "", message: "", subMessage: null });
 
@@ -53,10 +56,15 @@ const HRDashboard = () => {
       name: newEmployee.name,
       email: newEmployee.email,
       employeeType: newEmployee.employeeType,
+      role: newEmployee.role,
+      shift: {
+        startTime: newEmployee.shiftStartTime,
+        endTime: newEmployee.shiftEndTime
+      }
     });
 
     if (result && result.employeeAccount) {
-      setNewEmployee({ name: "", email: "", employeeType: "office" });
+      setNewEmployee({ name: "", email: "", employeeType: "office", role: "employee", shiftStartTime: "09:00", shiftEndTime: "18:00" });
       setShowAddEmployee(false);
       // alert(
       //   `Employee created successfully!\n\nEmployee ID: ${result.employeeAccount.empId}\nPassword: ${result.employeeAccount.password}\nType: ${result.employeeAccount.employeeType}`
@@ -193,7 +201,7 @@ const HRDashboard = () => {
             <div className="card-body d-flex justify-content-between align-items-center">
               <div>
                 <h6 className="text-uppercase small fw-bold mb-1" style={{ color: 'rgba(255,255,255,0.8)' }}>Total Employees</h6>
-                <h2 className="mb-0 fw-bold display-6">{company.employeeAccounts.length}</h2>
+                <h2 className="mb-0 fw-bold display-6">{(company.employeeAccounts || []).length}</h2>
               </div>
               <div className="rounded-circle d-flex align-items-center justify-content-center" style={{ width: '56px', height: '56px', backgroundColor: 'rgba(255,255,255,0.2)' }}>
                 <FaUsers size={24} />
@@ -206,7 +214,7 @@ const HRDashboard = () => {
             <div className="card-body d-flex justify-content-between align-items-center">
               <div>
                 <h6 className="text-uppercase small fw-bold mb-1" style={{ color: 'rgba(255,255,255,0.8)' }}>Office Employees</h6>
-                <h2 className="mb-0 fw-bold display-6">{company.employeeAccounts.filter((e) => e.employeeType === "office").length}</h2>
+                <h2 className="mb-0 fw-bold display-6">{(company.employeeAccounts || []).filter((e) => e.employeeType === "office").length}</h2>
               </div>
               <div className="rounded-circle d-flex align-items-center justify-content-center" style={{ width: '56px', height: '56px', backgroundColor: 'rgba(255,255,255,0.2)' }}>
                 <FaBuilding size={24} />
@@ -219,7 +227,7 @@ const HRDashboard = () => {
             <div className="card-body d-flex justify-content-between align-items-center">
               <div>
                 <h6 className="text-uppercase small fw-bold mb-1" style={{ color: 'rgba(255,255,255,0.8)' }}>Sales & WFH</h6>
-                <h2 className="mb-0 fw-bold display-6">{company.employeeAccounts.filter((e) => e.employeeType !== "office").length}</h2>
+                <h2 className="mb-0 fw-bold display-6">{(company.employeeAccounts || []).filter((e) => e.employeeType !== "office").length}</h2>
               </div>
               <div className="rounded-circle d-flex align-items-center justify-content-center" style={{ width: '56px', height: '56px', backgroundColor: 'rgba(255,255,255,0.2)' }}>
                 <FaLaptop size={24} />
@@ -260,7 +268,7 @@ const HRDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {company.employeeAccounts.map((employee) => (
+                {(company.employeeAccounts || []).map((employee) => (
                   <tr key={employee.id} style={{ borderBottomColor: 'var(--border-color)' }}>
                     <td className="px-4 py-3 align-middle fw-medium">{employee.name}</td>
                     <td className="px-4 py-3 align-middle">{employee.email}</td>
@@ -308,7 +316,7 @@ const HRDashboard = () => {
                 ))}
               </tbody>
             </table>
-            {company.employeeAccounts.length === 0 && (
+            {(company.employeeAccounts || []).length === 0 && (
               <div className="p-5 text-center d-flex flex-column align-items-center justify-content-center" style={{ minHeight: '300px' }}>
                 <div className="rounded-circle bg-light d-flex align-items-center justify-content-center mb-4" style={{ width: '80px', height: '80px' }}>
                   <FaUsers size={32} className="text-primary opacity-50" />
@@ -388,7 +396,26 @@ const HRDashboard = () => {
                       />
                     </div>
                     <div className="mb-4">
-                      <label className="form-label mb-2 fw-bold text-dark" style={{ fontSize: '0.9rem' }}>ROLE / TYPE</label>
+                      <label className="form-label mb-2 fw-bold text-dark" style={{ fontSize: '0.9rem' }}>ROLE</label>
+                      <select
+                        className="form-select form-select-lg mb-3"
+                        value={newEmployee.role}
+                        onChange={(e) =>
+                          setNewEmployee({ ...newEmployee, role: e.target.value })
+                        }
+                        style={{
+                          backgroundColor: '#f8fafc',
+                          color: '#0f172a',
+                          borderRadius: '8px',
+                          border: '2px solid #e2e8f0',
+                          fontSize: '1rem'
+                        }}
+                      >
+                        <option value="employee">Standard Employee</option>
+                        <option value="project_manager">Project Manager (Team Lead)</option>
+                      </select>
+
+                      <label className="form-label mb-2 fw-bold text-dark" style={{ fontSize: '0.9rem' }}>EMPLOYEE TYPE</label>
                       <select
                         className="form-select form-select-lg"
                         value={newEmployee.employeeType}
@@ -407,6 +434,42 @@ const HRDashboard = () => {
                         <option value="sales">Field Sales Agent</option>
                         <option value="wfh">Remote / WFH</option>
                       </select>
+                    </div>
+                    <div className="mb-4">
+                      <div className="row">
+                        <div className="col-6">
+                          <label className="form-label mb-2 fw-bold text-dark" style={{ fontSize: '0.9rem' }}>SHIFT START</label>
+                          <input
+                            type="time"
+                            className="form-control form-control-lg"
+                            value={newEmployee.shiftStartTime}
+                            onChange={(e) => setNewEmployee({ ...newEmployee, shiftStartTime: e.target.value })}
+                            style={{
+                              backgroundColor: '#f8fafc',
+                              color: '#0f172a',
+                              borderRadius: '8px',
+                              border: '2px solid #e2e8f0',
+                              fontSize: '1rem'
+                            }}
+                          />
+                        </div>
+                        <div className="col-6">
+                          <label className="form-label mb-2 fw-bold text-dark" style={{ fontSize: '0.9rem' }}>SHIFT END</label>
+                          <input
+                            type="time"
+                            className="form-control form-control-lg"
+                            value={newEmployee.shiftEndTime}
+                            onChange={(e) => setNewEmployee({ ...newEmployee, shiftEndTime: e.target.value })}
+                            style={{
+                              backgroundColor: '#f8fafc',
+                              color: '#0f172a',
+                              borderRadius: '8px',
+                              border: '2px solid #e2e8f0',
+                              fontSize: '1rem'
+                            }}
+                          />
+                        </div>
+                      </div>
                     </div>
                     <div className="alert alert-primary border-0 rounded-3 p-3 d-flex align-items-center gap-3 mb-0">
                       <FaInfoCircle size={18} className="text-primary" />
