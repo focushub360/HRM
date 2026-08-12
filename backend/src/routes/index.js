@@ -16,6 +16,7 @@ import projectRoutes from './projectRoutes.js';
 import projectTaskRoutes from './projectTaskRoutes.js';
 import gpsRoutes from './gpsRoutes.js';
 import dailyWorkReportRoutes from './dailyWorkReportRoutes.js';
+import chatRoutes from './chatRoutes.js';
 
 import { getProjectsWithTasks } from '../controllers/projectController.js';
 
@@ -39,6 +40,7 @@ router.use('/projects', projectRoutes);
 router.use('/project-tasks', projectTaskRoutes);
 router.use('/gps', gpsRoutes);
 router.use('/daily-reports', dailyWorkReportRoutes);
+router.use('/chat', chatRoutes);
 
 // Batch endpoint: projects + their tasks combined
 router.get('/projects-with-tasks/:companyId', getProjectsWithTasks);

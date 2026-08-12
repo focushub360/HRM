@@ -1,19 +1,22 @@
 import mongoose from 'mongoose';
 import { idTransform } from './_shared.js';
 
-// Kept for parity with the old backend's weekly cleanup job. The current
-// frontend chat (Chat.jsx) talks to Firebase directly, but this collection
-// is here and wired into the cleanup scheduler in case chat is later
-// migrated to this REST API too.
 const messageSchema = new mongoose.Schema(
   {
-    companyId: mongoose.Schema.Types.Mixed,
-    senderId: String,
-    receiverId: String,
-    content: String,
-    timestamp: { type: String, default: () => new Date().toISOString() }
+    companyId: { type: mongoose.Schema.Types.Mixed, required: true },
+    channel: { type: String, default: 'company' }, // 'company', 'hr', 'broadcast', 'team', 'dm'
+    targetGroup: { type: String, default: 'General' }, // Department or Group
+    senderId: { type: String, required: true },
+    senderName: { type: String, required: true },
+    senderRole: { type: String, default: 'employee' },
+    senderAvatar: { type: String, default: '' },
+    receiverId: { type: String, default: '' }, // For DMs
+    receiverName: { type: String, default: '' },
+    content: { type: String, required: true },
+    attachments: { type: Array, default: [] },
+    createdAt: { type: String, default: () => new Date().toISOString() }
   },
-  { strict: false }
+  { strict: false, timestamps: true }
 );
 
 messageSchema.set('toJSON', idTransform);

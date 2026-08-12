@@ -89,7 +89,7 @@ const CompanyDashboard = () => {
               </div>
               <i className="bi bi-chevron-down small" style={{ color: 'var(--text-muted)' }}></i>
             </button>
-            <ul className="dropdown-menu dropdown-menu-end shadow-sm border-0 mb-2 mt-0" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+            <ul className="dropdown-menu dropdown-menu-end shadow-lg border-0 mb-2 mt-2" style={{ backgroundColor: 'var(--bg-card, #ffffff)', border: '1px solid var(--border-color)', zIndex: 2050, opacity: 1 }}>
               <li><button className="dropdown-item" onClick={() => window.location.href = '/profile'} style={{ color: 'var(--text-main)' }}><i className="bi bi-person me-2"></i>My Profile</button></li>
               <li><button className="dropdown-item" onClick={() => window.location.href = '/settings'} style={{ color: 'var(--text-main)' }}><i className="bi bi-gear me-2"></i>Settings</button></li>
               <li><hr className="dropdown-divider" style={{ borderColor: 'var(--border-color)' }} /></li>

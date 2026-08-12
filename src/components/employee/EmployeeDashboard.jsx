@@ -521,7 +521,7 @@ const EmployeeDashboard = () => {
           <p className="text-muted mb-0" style={{ fontSize: '0.9rem' }}>Overview & Attendance</p>
         </div>
 
-        <div className="dropup">
+        <div className="dropdown" style={{ position: 'relative', zIndex: 1060 }}>
           <button
             className="btn border-0 p-0 d-flex align-items-center gap-2"
             type="button"
@@ -550,7 +550,7 @@ const EmployeeDashboard = () => {
             </div>
             <i className="bi bi-chevron-down small" style={{ color: 'var(--text-muted)' }}></i>
           </button>
-          <ul className="dropdown-menu dropdown-menu-end shadow-sm border-0 mb-2 mt-0" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+          <ul className="dropdown-menu dropdown-menu-end shadow-lg border-0 mb-2 mt-2" style={{ backgroundColor: 'var(--bg-card, #ffffff)', border: '1px solid var(--border-color)', zIndex: 2050, opacity: 1 }}>
             <li><button className="dropdown-item" onClick={() => navigate('/profile')} style={{ color: 'var(--text-main)' }}><i className="bi bi-person me-2"></i>My Profile</button></li>
             <li><button className="dropdown-item" onClick={() => navigate('/settings')} style={{ color: 'var(--text-main)' }}><i className="bi bi-gear me-2"></i>Settings</button></li>
             <li><hr className="dropdown-divider" style={{ borderColor: 'var(--border-color)' }} /></li>

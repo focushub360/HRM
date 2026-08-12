@@ -184,7 +184,7 @@ const HRDashboard = () => {
               </div>
               <FaChevronDown className="small" style={{ color: 'var(--text-muted)', fontSize: '0.6rem' }} />
             </button>
-            <ul className="dropdown-menu dropdown-menu-end shadow-sm border-0 mb-2 mt-0" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+            <ul className="dropdown-menu dropdown-menu-end shadow-lg border-0 mb-2 mt-2" style={{ backgroundColor: 'var(--bg-card, #ffffff)', border: '1px solid var(--border-color)', zIndex: 2050, opacity: 1 }}>
               <li><button className="dropdown-item" onClick={() => window.location.href = '/profile'} style={{ color: 'var(--text-main)' }}><FaUser className="me-2" /> My Profile</button></li>
               <li><button className="dropdown-item" onClick={() => window.location.href = '/settings'} style={{ color: 'var(--text-main)' }}><FaCog className="me-2" /> Settings</button></li>
               <li><hr className="dropdown-divider" style={{ borderColor: 'var(--border-color)' }} /></li>
