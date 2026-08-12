@@ -138,7 +138,7 @@ const HRDashboard = () => {
         <div>
           <h4 className="fw-bold mb-1" style={{ color: 'var(--text-main)' }}>HR Dashboard</h4>
           <p className="text-muted mb-0" style={{ color: 'var(--text-muted)' }}>
-            {getGreeting()}, <span className="fw-bold" style={{ color: 'var(--primary)' }}>{user?.name || 'HR Manager'}</span>! ðŸ‘‹
+            {getGreeting()}, <span className="fw-bold" style={{ color: 'var(--primary)' }}>{user?.name || 'HR Manager'}</span>!
             <span className="mx-2" style={{ color: 'var(--border-color)' }}>|</span>
             {company.name} <small className="text-muted" style={{ color: 'var(--text-muted)' }}>({company.code})</small>
           </p>

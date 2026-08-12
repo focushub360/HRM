@@ -84,11 +84,6 @@ const EmployeeDashboard = () => {
           `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
         );
       }
-
-      // Auto Reset at 11:00 PM (23:00)
-      if (now.getHours() === 23 && now.getMinutes() === 0 && isCheckedIn) {
-        handleCheckOut(true);
-      }
     }, 1000);
 
     return () => clearInterval(interval);
@@ -472,7 +467,7 @@ const EmployeeDashboard = () => {
       <div className="d-flex justify-content-between align-items-center mb-3 p-3 rounded shadow-sm card-custom flex-shrink-0">
         <div>
           <h3 className="mb-1 fw-bold text-primary">
-            {getGreeting()}, {user?.name || "Employee"}! ðŸ‘‹
+            {getGreeting()}, {user?.name || "Employee"}!
           </h3>
           <p className="text-muted mb-0" style={{ color: 'var(--text-muted)' }}>
             Logged in as: <span className="fw-bold" style={{ color: 'var(--text-main)' }}>{user?.email}</span>

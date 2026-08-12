@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
 
@@ -101,7 +101,7 @@ const CompanyDashboard = () => {
 
       <div className="alert alert-success d-flex justify-content-between align-items-center" role="alert" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', color: 'var(--success)' }}>
         <div>
-          <h4 className="alert-heading mb-1">{getGreeting()}, {user?.name || "Admin"}! ðŸ‘‘</h4>
+          <h4 className="alert-heading mb-1">{getGreeting()}, {user?.name || "Admin"}!</h4>
           <p className="mb-0">Logged in as: <strong>{user?.email}</strong></p>
         </div>
         <div className="text-end">
