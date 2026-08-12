@@ -1,19 +1,22 @@
-import React, { useState, useEffect, useMemo } from "react";
+﻿import React, { useState, useEffect, useMemo } from "react";
+import { useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
 
 const ActivityReports = () => {
   const { user, activityLog: contextLogs, inactivityAlerts, deleteActivity, companies, getCompanyActivities, refreshActivityLogs } = useAuth();
-  const [selectedCompany, setSelectedCompany] = useState('');
+  const location = useLocation();
+  const [selectedCompany, setSelectedCompany] = useState("");
   // Helper to get local date string YYYY-MM-DD from timestamp
   const getLocalDateString = (isoString) => {
-    if (!isoString) return '';
+    if (!isoString) return "";
     const date = new Date(isoString);
     const offset = date.getTimezoneOffset();
     const local = new Date(date.getTime() - (offset * 60 * 1000));
-    return local.toISOString().split('T')[0];
+    return local.toISOString().split("T")[0];
   };
 
-  const [selectedDate, setSelectedDate] = useState(new Date().toLocaleDateString('en-CA')); // YYYY-MM-DD
+
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
   const [activityLogs, setActivityLogs] = useState([]);
   const [employeeTypeFilter, setEmployeeTypeFilter] = useState('all');
   const [employeeFilter, setEmployeeFilter] = useState('all'); // Filter by specific employee name/ID
@@ -69,7 +72,7 @@ const ActivityReports = () => {
     return activityLogs.filter(log => {
       // Date Filter - Use Local Date
       const logDate = getLocalDateString(log.timestamp);
-      const dateMatch = !selectedDate || logDate === selectedDate;
+      const dateMatch = !selectedMonth || logDate.startsWith(selectedMonth);
 
       // Employee Type Filter
       const typeMatch = employeeTypeFilter === 'all' || (log.employeeType === employeeTypeFilter);
@@ -79,7 +82,7 @@ const ActivityReports = () => {
 
       return dateMatch && typeMatch && empMatch;
     }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-  }, [activityLogs, selectedDate, employeeTypeFilter, employeeFilter]);
+  }, [activityLogs, selectedMonth, employeeTypeFilter, employeeFilter]);
 
   // Calculate total active time per employee
   const calculateEmployeeStats = () => {
@@ -104,7 +107,7 @@ const ActivityReports = () => {
 
     const relevantAlerts = inactivityAlerts.filter(alert => {
       const alertDate = getLocalDateString(alert.timestamp);
-      return (!selectedDate || alertDate === selectedDate);
+      return (!selectedMonth || alertDate.startsWith(selectedMonth));
     });
 
     relevantAlerts.forEach((alert) => {
@@ -122,9 +125,9 @@ const ActivityReports = () => {
   const filteredInactivityAlerts = useMemo(() => {
     return inactivityAlerts.filter(alert => {
       const alertDate = getLocalDateString(alert.timestamp);
-      return !selectedDate || alertDate === selectedDate;
+      return !selectedMonth || alertDate.startsWith(selectedMonth);
     });
-  }, [inactivityAlerts, selectedDate]);
+  }, [inactivityAlerts, selectedMonth]);
 
   const handleDeleteActivity = async (id) => {
     if (window.confirm("Are you sure you want to delete this activity log?")) {
@@ -135,6 +138,24 @@ const ActivityReports = () => {
   const isSuperAdmin = !user?.companyId;
 
   const [currentView, setCurrentView] = useState('dashboard');
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const employeeParam = params.get('employee');
+    const viewParam = params.get('view');
+
+    if (employeeParam) {
+      setEmployeeFilter(employeeParam);
+    } else {
+      setEmployeeFilter('all');
+    }
+
+    if (viewParam && ['dashboard', 'logins', 'events', 'inactivity'].includes(viewParam)) {
+      setCurrentView(viewParam);
+    } else if (employeeParam) {
+      setCurrentView('logins');
+    }
+  }, [location.search]);
 
   const handleViewChange = (view) => {
     setCurrentView(view);
@@ -407,10 +428,10 @@ const ActivityReports = () => {
         {/* Filters stay accessible so users can filter before drilling down or while in view */}
         <div className="d-flex gap-2">
           <input
-            type="date"
+            type="month"
             className="form-control"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
             style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', borderColor: 'var(--border-color)' }}
           />
           <select
@@ -438,3 +459,5 @@ const ActivityReports = () => {
 };
 
 export default ActivityReports;
+
+

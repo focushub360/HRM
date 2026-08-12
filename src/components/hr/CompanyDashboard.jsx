@@ -1,9 +1,14 @@
-import React from "react";
-import { Link } from "react-router-dom";
+﻿import React from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
 
 const CompanyDashboard = () => {
+  const navigate = useNavigate();
   const { user, companies, refreshDashboardData } = useAuth();
+  
+  const handleCompanyClick = (company) => {
+    navigate(`/admin/company/${company.id}`);
+  };
 
   // Calculate analytics
   const totalCompanies = companies.length;
@@ -35,12 +40,12 @@ const CompanyDashboard = () => {
   };
 
   return (
-    <div className="container-fluid" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', overflowX: 'hidden', paddingTop: '60px', paddingBottom: '20px', color: 'var(--text-main)' }}>
-      <div className="d-flex justify-content-between align-items-center mb-4 ps-5">
+    <div className="container-fluid" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', overflowX: 'hidden', paddingTop: '15px', paddingBottom: '20px', color: 'var(--text-main)' }}>
+      <div className="d-flex justify-content-between align-items-center mb-3 ps-3">
         <div>
-          <div className="d-flex align-items-center gap-3">
-            <h1 className="mb-0">Company Admin Dashboard</h1>
-            <span className="badge bg-danger d-flex align-items-center gap-1 pulse-slow" style={{ fontSize: '0.8rem', height: 'fit-content', padding: '0.4rem 0.6rem' }}>
+          <div className="d-flex align-items-center gap-2">
+            <h1 className="mb-0 fs-3">Company Admin Dashboard</h1>
+            <span className="badge bg-danger d-flex align-items-center gap-1 pulse-slow" style={{ fontSize: '0.75rem', height: 'fit-content', padding: '0.3rem 0.5rem' }}>
               <span className="rounded-circle bg-white" style={{ width: '6px', height: '6px' }}></span>
               LIVE
             </span>
@@ -55,7 +60,7 @@ const CompanyDashboard = () => {
 
           <div className="vr h-50 mx-2" style={{ backgroundColor: 'var(--border-color)' }}></div>
 
-          <div className="dropdown">
+          <div className="dropup">
             <button
               className="btn border-0 p-0 d-flex align-items-center gap-2"
               type="button"
@@ -84,7 +89,7 @@ const CompanyDashboard = () => {
               </div>
               <i className="bi bi-chevron-down small" style={{ color: 'var(--text-muted)' }}></i>
             </button>
-            <ul className="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+            <ul className="dropdown-menu dropdown-menu-end shadow-sm border-0 mb-2 mt-0" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
               <li><button className="dropdown-item" onClick={() => window.location.href = '/profile'} style={{ color: 'var(--text-main)' }}><i className="bi bi-person me-2"></i>My Profile</button></li>
               <li><button className="dropdown-item" onClick={() => window.location.href = '/settings'} style={{ color: 'var(--text-main)' }}><i className="bi bi-gear me-2"></i>Settings</button></li>
               <li><hr className="dropdown-divider" style={{ borderColor: 'var(--border-color)' }} /></li>
@@ -96,7 +101,7 @@ const CompanyDashboard = () => {
 
       <div className="alert alert-success d-flex justify-content-between align-items-center" role="alert" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', color: 'var(--success)' }}>
         <div>
-          <h4 className="alert-heading mb-1">{getGreeting()}, {user?.name || "Admin"}! 👑</h4>
+          <h4 className="alert-heading mb-1">{getGreeting()}, {user?.name || "Admin"}! ðŸ‘‘</h4>
           <p className="mb-0">Logged in as: <strong>{user?.email}</strong></p>
         </div>
         <div className="text-end">
@@ -122,14 +127,14 @@ const CompanyDashboard = () => {
           </div>
         </div>
         <div className="col-md-3 mb-3">
-          <div className="card shadow-sm border-left border-success h-100" style={{ borderLeftWidth: '5px' }}>
+          <div className="card shadow-sm border-left border-primary h-100" style={{ borderLeftWidth: '5px' }}>
             <div className="card-body p-3">
               <div className="d-flex justify-content-between align-items-start">
                 <div>
                   <h5 className="card-title text-uppercase fs-6" style={{ color: 'var(--text-muted)' }}>HR Managers</h5>
-                  <h2 className="text-success fw-bold mb-0">{totalHRs}</h2>
+                  <h2 className="text-primary fw-bold mb-0">{totalHRs}</h2>
                 </div>
-                <div className="icon-shape text-success rounded p-3" style={{ background: 'rgba(16, 185, 129, 0.1)' }}>
+                <div className="icon-shape text-primary rounded p-3" style={{ background: 'rgba(99, 102, 241, 0.1)' }}>
                   <i className="bi bi-person-badge-fill fs-4"></i>
                 </div>
               </div>
@@ -138,14 +143,14 @@ const CompanyDashboard = () => {
           </div>
         </div>
         <div className="col-md-3 mb-3">
-          <div className="card shadow-sm border-left border-warning h-100" style={{ borderLeftWidth: '5px' }}>
+          <div className="card shadow-sm border-left border-primary h-100" style={{ borderLeftWidth: '5px' }}>
             <div className="card-body p-3">
               <div className="d-flex justify-content-between align-items-start">
                 <div>
                   <h5 className="card-title text-uppercase fs-6" style={{ color: 'var(--text-muted)' }}>Active Companies</h5>
-                  <h2 className="text-warning fw-bold mb-0">{activeCompanies}</h2>
+                  <h2 className="text-primary fw-bold mb-0">{activeCompanies}</h2>
                 </div>
-                <div className="icon-shape text-warning rounded p-3" style={{ background: 'rgba(245, 158, 11, 0.1)' }}>
+                <div className="icon-shape text-primary rounded p-3" style={{ background: 'rgba(99, 102, 241, 0.1)' }}>
                   <i className="bi bi-building fs-4"></i>
                 </div>
               </div>
@@ -154,16 +159,16 @@ const CompanyDashboard = () => {
           </div>
         </div>
         <div className="col-md-3 mb-3">
-          <div className="card shadow-sm border-left border-info h-100" style={{ borderLeftWidth: '5px' }}>
+          <div className="card shadow-sm border-left border-primary h-100" style={{ borderLeftWidth: '5px' }}>
             <div className="card-body p-3">
               <div className="d-flex justify-content-between align-items-start">
                 <div>
                   <h5 className="card-title text-uppercase fs-6" style={{ color: 'var(--text-muted)' }}>Avg. Emp/Company</h5>
-                  <h2 className="text-info fw-bold mb-0">
+                  <h2 className="text-primary fw-bold mb-0">
                     {totalCompanies > 0 ? Math.round(totalEmployees / totalCompanies) : 0}
                   </h2>
                 </div>
-                <div className="icon-shape text-info rounded p-3" style={{ background: 'rgba(6, 182, 212, 0.1)' }}>
+                <div className="icon-shape text-primary rounded p-3" style={{ background: 'rgba(99, 102, 241, 0.1)' }}>
                   <i className="bi bi-graph-up fs-4"></i>
                 </div>
               </div>
@@ -196,7 +201,7 @@ const CompanyDashboard = () => {
                   <tbody>
                     {companies.length > 0 ? (
                       companies.map((company) => (
-                        <tr key={company.id} style={{ borderBottomColor: 'var(--border-color)' }}>
+                        <tr key={company.id} style={{ borderBottomColor: 'var(--border-color)', cursor: 'pointer' }} onClick={() => handleCompanyClick(company)}>
                           <td>
                             <div className="d-flex align-items-center">
                               <div className="avatar-initials text-primary rounded-circle me-3" style={{ width: '35px', height: '35px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', background: 'rgba(99, 102, 241, 0.1)' }}>
@@ -240,3 +245,4 @@ const CompanyDashboard = () => {
 };
 
 export default CompanyDashboard;
+

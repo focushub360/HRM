@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useTheme } from "../../context/ThemeContext.jsx";
 import {
@@ -130,7 +130,7 @@ const HRDashboard = () => {
         <div>
           <h4 className="fw-bold mb-1" style={{ color: 'var(--text-main)' }}>HR Dashboard</h4>
           <p className="text-muted mb-0" style={{ color: 'var(--text-muted)' }}>
-            {getGreeting()}, <span className="fw-bold" style={{ color: 'var(--primary)' }}>{user?.name || 'HR Manager'}</span>! 👋
+            {getGreeting()}, <span className="fw-bold" style={{ color: 'var(--primary)' }}>{user?.name || 'HR Manager'}</span>! ðŸ‘‹
             <span className="mx-2" style={{ color: 'var(--border-color)' }}>|</span>
             {company.name} <small className="text-muted" style={{ color: 'var(--text-muted)' }}>({company.code})</small>
           </p>
@@ -147,7 +147,7 @@ const HRDashboard = () => {
           <div className="vr h-50 mx-2" style={{ backgroundColor: 'var(--border-color)' }}></div>
 
           {/* Profile Dropdown */}
-          <div className="dropdown">
+          <div className="dropup">
             <button
               className="btn border-0 p-0 d-flex align-items-center gap-2"
               type="button"
@@ -176,7 +176,7 @@ const HRDashboard = () => {
               </div>
               <FaChevronDown className="small" style={{ color: 'var(--text-muted)', fontSize: '0.6rem' }} />
             </button>
-            <ul className="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+            <ul className="dropdown-menu dropdown-menu-end shadow-sm border-0 mb-2 mt-0" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
               <li><button className="dropdown-item" onClick={() => window.location.href = '/profile'} style={{ color: 'var(--text-main)' }}><FaUser className="me-2" /> My Profile</button></li>
               <li><button className="dropdown-item" onClick={() => window.location.href = '/settings'} style={{ color: 'var(--text-main)' }}><FaCog className="me-2" /> Settings</button></li>
               <li><hr className="dropdown-divider" style={{ borderColor: 'var(--border-color)' }} /></li>
@@ -445,3 +445,4 @@ const HRDashboard = () => {
 };
 
 export default HRDashboard;
+

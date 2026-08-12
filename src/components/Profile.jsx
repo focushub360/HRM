@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { storage } from '../firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -103,6 +103,7 @@ const Profile = () => {
     };
 
     const [loadingText, setLoadingText] = useState("");
+    const isProfileEditable = !(user?.role === 'admin' || user?.type === 'company' || user?.type === 'company_admin');
 
     // Helper: Compress Image to DataURL (Base64) - Resizing to 500x500 for speed
     const compressImage = (file) => {
@@ -146,6 +147,9 @@ const Profile = () => {
     };
 
     const handleSave = async () => {
+        if (!isProfileEditable) {
+            return;
+        }
         setLoadingText("Saving...");
         try {
             let imageUrl = formData.profileImage;
@@ -272,9 +276,11 @@ const Profile = () => {
                             <button className="btn btn-warning me-2" onClick={() => setIsPasswordModalOpen(true)}>
                                 <FaKey className="me-2" /> Change Password
                             </button>
-                            <button className="btn btn-primary" onClick={() => setIsEditing(true)}>
-                                <FaEdit className="me-2" /> Edit Profile
-                            </button>
+                            {isProfileEditable && (
+                                <button className="btn btn-primary" onClick={() => setIsEditing(true)}>
+                                    <FaEdit className="me-2" /> Edit Profile
+                                </button>
+                            )}
                         </>
                     ) : (
                         <div className="d-flex gap-2">
@@ -315,7 +321,7 @@ const Profile = () => {
                                 </div>
 
                                 {/* Edit & Delete Icons */}
-                                {isEditing && (
+                                {isEditing && isProfileEditable && (
                                     <div className="position-absolute bottom-0 start-50 translate-middle-x d-flex gap-2" style={{ marginBottom: '-15px' }}>
                                         <label className="btn btn-primary btn-sm rounded-circle shadow d-flex align-items-center justify-content-center" style={{ width: '35px', height: '35px', cursor: 'pointer' }} title="Change Photo">
                                             <FaCamera size={16} />
@@ -340,6 +346,7 @@ const Profile = () => {
                             <h4 className="fw-bold mt-3">{user.name}</h4>
                             <p className="text-muted mb-1">{user.position || user.designation || 'Employee'}</p>
                             <span className="badge bg-primary text-uppercase px-3 py-2">{user.employeeType}</span>
+                            {!isProfileEditable && <div className="mt-3 text-muted small">Admin profile is fixed.</div>}
 
                             <div className="mt-4 pt-3 border-top text-start">
                                 <div className="d-flex align-items-center mb-3">
@@ -391,7 +398,7 @@ const Profile = () => {
                                 </div>
                                 <div className="col-md-6 mb-3">
                                     <label className="form-label text-muted small text-uppercase fw-bold">Salary (CTC)</label>
-                                    <div className="fw-medium border-bottom pb-1 text-success fw-bold">{user.salary ? `₹${user.salary}` : 'Confidential'}</div>
+                                    <div className="fw-medium border-bottom pb-1 text-success fw-bold">{user.salary ? `â‚¹${user.salary}` : 'Confidential'}</div>
                                 </div>
                             </div>
                         </div>
@@ -429,3 +436,6 @@ const Profile = () => {
 };
 
 export default Profile;
+
+
+

@@ -28,6 +28,36 @@ ChartJS.register(
     LineElement
 );
 
+// Render each non-empty pie/doughnut slice with its share of the total.
+const percentageLabelsPlugin = {
+    id: 'percentageLabels',
+    afterDatasetsDraw(chart) {
+        const { ctx } = chart;
+        const dataset = chart.data.datasets[0];
+        const values = dataset?.data?.map(Number) || [];
+        const total = values.reduce((sum, value) => sum + (value > 0 ? value : 0), 0);
+
+        if (!total) return;
+
+        chart.getDatasetMeta(0).data.forEach((arc, index) => {
+            const value = values[index];
+            if (!value || arc.circumference < 0.15) return;
+
+            const percentage = Math.round((value / total) * 100);
+            const { x, y } = arc.getCenterPoint();
+            const backgroundColor = dataset.backgroundColor?.[index];
+
+            ctx.save();
+            ctx.fillStyle = backgroundColor === '#f6c23e' ? '#343a40' : '#ffffff';
+            ctx.font = '600 12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`${percentage}%`, x, y);
+            ctx.restore();
+        });
+    }
+};
+
 const HRAnalytics = () => {
     const { user, companies, activityLog, leaveRequests, refreshDashboardData } = useAuth();
     const [selectedCompanyId, setSelectedCompanyId] = React.useState(user?.companyId);
@@ -289,7 +319,24 @@ const HRAnalytics = () => {
                             </div>
                             <div className="card-body">
                                 <div className="chart-pie pt-4 pb-2" style={{ height: '300px', display: 'flex', justifyContent: 'center' }}>
-                                    <Pie data={departmentData} options={{ maintainAspectRatio: false }} />
+                                    <Pie
+                                        data={departmentData}
+                                        options={{
+                                            maintainAspectRatio: false,
+                                            plugins: {
+                                                tooltip: {
+                                                    callbacks: {
+                                                        label: (context) => {
+                                                            const total = context.dataset.data.reduce((sum, value) => sum + value, 0);
+                                                            const percentage = total ? Math.round((context.raw / total) * 100) : 0;
+                                                            return `${context.label}: ${context.raw} (${percentage}%)`;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }}
+                                        plugins={[percentageLabelsPlugin]}
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -303,7 +350,24 @@ const HRAnalytics = () => {
                             </div>
                             <div className="card-body">
                                 <div className="chart-pie pt-4 pb-2" style={{ height: '300px', display: 'flex', justifyContent: 'center' }}>
-                                    <Doughnut data={leaveData} options={{ maintainAspectRatio: false }} />
+                                    <Doughnut
+                                        data={leaveData}
+                                        options={{
+                                            maintainAspectRatio: false,
+                                            plugins: {
+                                                tooltip: {
+                                                    callbacks: {
+                                                        label: (context) => {
+                                                            const total = context.dataset.data.reduce((sum, value) => sum + value, 0);
+                                                            const percentage = total ? Math.round((context.raw / total) * 100) : 0;
+                                                            return `${context.label}: ${context.raw} (${percentage}%)`;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }}
+                                        plugins={[percentageLabelsPlugin]}
+                                    />
                                 </div>
                             </div>
                         </div>

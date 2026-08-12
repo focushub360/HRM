@@ -14,6 +14,7 @@ const VisitsScreen = () => {
     const [user, setUser] = useState(null);
     const [modalVisible, setModalVisible] = useState(false);
     const [currentLoc, setCurrentLoc] = useState(null);
+    const [currentAddress, setCurrentAddress] = useState('Fetching exact location...');
     const [visitImage, setVisitImage] = useState(null);
     const [showCamera, setShowCamera] = useState(false);
     const cameraRef = React.useRef(null);
@@ -34,10 +35,25 @@ const VisitsScreen = () => {
             try {
                 let { status } = await Location.requestForegroundPermissionsAsync();
                 if (status === 'granted') {
-                    let loc = await Location.getCurrentPositionAsync({});
+                    let loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Highest });
                     setCurrentLoc(loc.coords);
+                    try {
+                        const geo = await Location.reverseGeocodeAsync(loc.coords);
+                        if (geo.length > 0) {
+                            const place = geo[0];
+                            setCurrentAddress(`${place.name || ''} ${place.street || ''}, ${place.city || ''}, ${place.region || ''}`.trim());
+                        } else {
+                            setCurrentAddress('Exact location coordinates obtained');
+                        }
+                    } catch(e) {
+                        setCurrentAddress('Exact location coordinates obtained');
+                    }
+                } else {
+                    setCurrentAddress('Location permission denied');
                 }
-            } catch (e) { }
+            } catch (e) {
+                setCurrentAddress('Failed to fetch location');
+            }
         })();
     }, []);
 
@@ -249,6 +265,11 @@ const VisitsScreen = () => {
                                     </TouchableOpacity>
                                 </View>
                                 <Text style={styles.client}>{visit.clientName}</Text>
+                                {visit.address && (
+                                    <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>
+                                        <Ionicons name="location-outline" size={12} /> {visit.address}
+                                    </Text>
+                                )}
                                 <Text style={styles.notes}>{visit.notes}</Text>
                             </View>
                         </View>
@@ -262,6 +283,11 @@ const VisitsScreen = () => {
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <Text style={styles.modalTitle}>New Visit</Text>
+                        
+                        <View style={{ backgroundColor: '#f0f4f8', padding: 10, borderRadius: 8, marginBottom: 15 }}>
+                            <Text style={{ fontSize: 12, color: '#333', fontWeight: 'bold' }}>📍 Extracted Location:</Text>
+                            <Text style={{ fontSize: 13, color: '#555', marginTop: 4 }}>{currentAddress}</Text>
+                        </View>
 
                         <TextInput
                             style={styles.textArea}

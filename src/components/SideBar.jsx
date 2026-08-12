@@ -36,7 +36,7 @@ const SideBar = () => {
   const { theme, toggleTheme } = useTheme();
 
   // State for sidebar visibility
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(() => (typeof window !== 'undefined' ? window.innerWidth >= 992 : true));
 
   const allNavItems = [
     { name: "Dashboard", icon: <MdSpaceDashboard />, path: "/", permission: "view_dashboard" },
@@ -182,6 +182,13 @@ const SideBar = () => {
         </ul>
 
         <div className="sidebar-footer">
+          <button 
+            className="logout-btn" 
+            style={{ marginBottom: '10px', backgroundColor: 'var(--surface-soft)', color: 'var(--text-main)' }} 
+            onClick={toggleTheme}
+          >
+            {theme === 'dark' ? <><FaSun /> <span>Light Mode</span></> : <><FaMoon /> <span>Dark Mode</span></>}
+          </button>
           <button className="logout-btn" onClick={handleLogout}>
             <FaSignOutAlt />
             <span>Logout</span>
@@ -193,3 +200,4 @@ const SideBar = () => {
 };
 
 export default SideBar;
+

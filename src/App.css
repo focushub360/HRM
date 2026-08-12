@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300..900&family=Londrina+Sketch&family=Montserrat:wght@100..900&family=Poppins:wght@700&family=Roboto:wght@100..900&family=Silkscreen:wght@400;700&display=swap');
+﻿@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300..900&family=Londrina+Sketch&family=Montserrat:wght@100..900&family=Poppins:wght@700&family=Roboto:wght@100..900&family=Silkscreen:wght@400;700&display=swap');
 @import './theme.css';
 
 /* === Font Variables === */
@@ -12,28 +12,28 @@
   --secondary-color: #8b5cf6;
 
   /* Light Theme Variables */
-  --bg-main: #f3f4f6;
+  --bg-main: #f7f9fc;
   /* Slate 100 - cleaner gray */
   --bg-sidebar: #ffffff;
   /* White Sidebar for Light Mode */
-  --bg-sidebar-hover: #f1f5f9;
+  --bg-sidebar-hover: #eef2f7;
   /* Slate 100 */
-  --bg-sidebar-active: #e2e8f0;
+  --bg-sidebar-active: #dbe5f0;
   /* Slate 200 */
 
-  --text-main: #1f2937;
+  --text-main: #172033;
   /* Gray 800 */
   --text-sidebar: #334155;
   /* Slate 700 for Sidebar text */
-  --text-sidebar-active: #0f172a;
+  --text-sidebar-active: #172033;
   /* Slate 900 */
 
   --logout-bg: #ef4444;
   --logout-hover: #dc2626;
 
   --card-bg: #ffffff;
-  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+  --shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --glass-border: 1px solid #dbe5f0;
 }
 
 
@@ -65,43 +65,45 @@ body {
   font-family: var(--font-main);
   margin: 0;
   padding: 0;
-  background-color: var(--bg-main);
+  background: var(--bg-main);
   color: var(--text-main);
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 #root {
   display: flex;
-  min-height: 100vh;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
 }
 
 /* === Sidebar === */
 .sidebar {
-  width: 0;
-  /* Closed state: 0 width */
+  width: 280px;
   flex-shrink: 0;
   background-color: var(--bg-sidebar);
   color: var(--text-sidebar);
   height: 100vh;
-  /* Remove fixed/absolute positioning to participate in Flexbox layout */
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 0;
   display: flex;
   flex-direction: column;
   padding: 1rem 0;
-  /* Hide content when width is small */
   overflow-x: hidden;
   overflow-y: auto;
   white-space: nowrap;
-  /* Prevent text wrapping during transition */
-  transition: background-color 0.3s ease;
-  z-index: 100;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+  transition: transform 0.28s ease, background-color 0.3s ease, box-shadow 0.28s ease;
+  transform: translateX(-100%);
+  z-index: 1200;
+  box-shadow: 12px 0 30px rgba(15, 23, 42, 0.12);
+  will-change: transform;
 }
 
 .sidebar.sidebar-open {
-  width: 260px;
-  /* Open state: full width */
+  transform: translateX(0);
 }
+
 
 /* Ensure padding doesn't keep it visible when closed if width is 0 */
 /* The padding is 1rem 0 (vertical), so horizontal is 0, which is good. */
@@ -113,22 +115,27 @@ body {
   top: 0;
   left: 0;
   width: 20px;
-  /* Width of the active hover area */
   height: 100vh;
-  z-index: 1060;
-  /* Above sidebar to catch hover if needed, but below open sidebar */
+  z-index: 1300;
   cursor: pointer;
   background-color: transparent;
-  /* Invisible */
-  /* Debugging: background-color: rgba(255, 0, 0, 0.2); */
   display: block;
 }
 
-/* When sidebar is open, hide the trigger so it doesn't interfere */
 .sidebar-trigger-hidden {
   display: none;
   pointer-events: none;
 }
+
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 1100;
+}
+
 
 .logo-container {
   display: flex;
@@ -442,7 +449,7 @@ input:checked+.slider .bi-moon-fill {
 .main-content {
   flex: 1;
   padding: 2rem;
-  background-color: var(--bg-main);
+  background: var(--bg-main);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -547,3 +554,71 @@ input:checked+.slider .bi-moon-fill {
 
 
 /* Dark Mode Overrides managed by theme.css via [data-theme='dark'] */
+
+
+/* Persistent account chip in the sidebar */
+.user-info {
+  position: sticky;
+  top: 0.5rem;
+  z-index: 1;
+  margin: 0.5rem 0.85rem 1rem;
+  padding: 0.9rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+}
+
+.user-meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.sidebar-user-chevron {
+  margin-left: auto;
+  color: var(--text-sidebar);
+  opacity: 0.6;
+  font-size: 0.85rem;
+}
+
+.user-name {
+  line-height: 1.2;
+}
+
+.user-role {
+  line-height: 1.2;
+}
+
+/* Shared account dropdown overlay */
+.dropdown-menu {
+  min-width: 13rem;
+  padding: 0.5rem;
+  border-radius: 14px;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
+  z-index: 2000;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.7rem 0.9rem;
+  border-radius: 10px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.dropdown-item svg,
+.dropdown-item i {
+  flex: 0 0 auto;
+}
+
+.dropdown-divider {
+  margin: 0.35rem 0;
+}
+
+.dropdown-menu .text-danger {
+  justify-content: flex-start;
+}

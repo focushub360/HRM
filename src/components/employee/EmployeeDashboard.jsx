@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { Link, useNavigate } from "react-router-dom";
 import { useTheme } from "../../context/ThemeContext";
@@ -388,7 +388,7 @@ const EmployeeDashboard = () => {
           <p className="text-muted mb-0" style={{ fontSize: '0.9rem' }}>Overview & Attendance</p>
         </div>
 
-        <div className="dropdown">
+        <div className="dropup">
           <button
             className="btn border-0 p-0 d-flex align-items-center gap-2"
             type="button"
@@ -417,7 +417,7 @@ const EmployeeDashboard = () => {
             </div>
             <i className="bi bi-chevron-down small" style={{ color: 'var(--text-muted)' }}></i>
           </button>
-          <ul className="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+          <ul className="dropdown-menu dropdown-menu-end shadow-sm border-0 mb-2 mt-0" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
             <li><button className="dropdown-item" onClick={() => navigate('/profile')} style={{ color: 'var(--text-main)' }}><i className="bi bi-person me-2"></i>My Profile</button></li>
             <li><button className="dropdown-item" onClick={() => navigate('/settings')} style={{ color: 'var(--text-main)' }}><i className="bi bi-gear me-2"></i>Settings</button></li>
             <li><hr className="dropdown-divider" style={{ borderColor: 'var(--border-color)' }} /></li>
@@ -430,7 +430,7 @@ const EmployeeDashboard = () => {
       <div className="d-flex justify-content-between align-items-center mb-3 p-3 rounded shadow-sm card-custom flex-shrink-0">
         <div>
           <h3 className="mb-1 fw-bold text-primary">
-            {getGreeting()}, {user?.name || "Employee"}! 👋
+            {getGreeting()}, {user?.name || "Employee"}! ðŸ‘‹
           </h3>
           <p className="text-muted mb-0" style={{ color: 'var(--text-muted)' }}>
             Logged in as: <span className="fw-bold" style={{ color: 'var(--text-main)' }}>{user?.email}</span>
@@ -463,7 +463,7 @@ const EmployeeDashboard = () => {
       {/* Inactivity Warning */}
       {inactivityWarning && isCheckedIn && (
         <div className="alert alert-warning alert-dismissible fade show mb-4" role="alert" style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.2)', color: 'var(--warning)' }}>
-          <strong>⚠️ Inactivity Alert!</strong> You have been inactive. HR has been notified.
+          <strong>âš ï¸ Inactivity Alert!</strong> You have been inactive. HR has been notified.
           <button type="button" className="btn-close" onClick={() => setInactivityWarning(false)}></button>
         </div>
       )}
@@ -655,3 +655,4 @@ const EmployeeDashboard = () => {
 };
 
 export default EmployeeDashboard;
+

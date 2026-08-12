@@ -91,41 +91,40 @@ Simply double-click **`START_PROJECT.bat`** in the root directory.
 
 ### 🔐 Default Login Credentials
 
-The app has **3 portals** on the login screen. Use the credentials below for each.
+Sign in directly using any of the active accounts below (the Unified Login System handles role routing automatically).
 
 ---
 
 #### 🏢 Company Portal (System Admin)
+*Super Admin access to manage companies and global settings.*
 
 | Field | Value |
 |-------|-------|
 | **Email** | `admin@focus.com` |
-| **Password** | `********` |
+| **Password** | `Focus@123` |
 | **Name** | Admin User |
 
 ---
 
 #### 👔 HR Manager Portal (Administrative Access)
+*HR/Admin access to manage employees, attendance, and payroll for a specific company (Cobinno).*
 
 | Field | Value |
 |-------|-------|
-| **Email** | `raj.kumar@techsolutions.com` |
-| **Password** | `********` |
-| **Name** | Raj Kumar |
-| **Emp ID** | `HR-TSI-001` |
-| **Company** | Tech Solutions India |
+| **Email** | `hr@focus.com` |
+| **Password** | `ZT@aeCZbu!fh` |
+| **Name** | hr |
+| **Company** | Cobinno |
 
 ---
 
 #### 👤 Employee Portal (Staff Portal)
+*Standard employee access for attendance, tracking, and dashboard.*
 
-| # | Name | Email | Password | Emp ID | Department |
-|---|------|-------|----------|--------|------------|
-| 1 | Alice Johnson | `alice@techsolutions.com` | `********` | `EMP-TSI-001` | Sales |
-| 2 | Bob Smith | `bob@techsolutions.com` | `********` | `EMP-TSI-002` | Engineering |
-| 3 | Charlie Brown | `charlie@techsolutions.com` | `********` | `EMP-TSI-003` | Marketing |
-
-> 💡 Run `node backend/seed_firestore.js` to seed the database with the above default accounts.
+| # | Name | Email | Password | Role / Department |
+|---|------|-------|----------|-------------------|
+| 1 | EMP | `offemp@gmail.com` | `yf3fdnl#Vi$y` | Office (Unassigned) |
+| 2 | Mobile Sales Tester | `sales@test.com` | `salestest` | Sales Field Agent |
 
 ---
 

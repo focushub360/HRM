@@ -8,7 +8,7 @@ import "/src/App.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 import loginLogo from "./assets/Logo.png";
 
-// Shared/Common Components
+import CompanySpecificDashboard from "./components/hr/CompanySpecificDashboard.jsx";
 import Event2 from "./components/Events2";
 import Event1 from "./components/Event1";
 import Event3 from "./components/Event3";
@@ -19,6 +19,7 @@ import Feed from "./components/Feed";
 import Recognition from "./components/Recognition";
 import ActivityTracker from "./components/ActivityTracker";
 import FaceProctoring from "./components/employee/FaceProctoring";
+import LiveGPSTracker from "./components/employee/LiveGPSTracker";
 import Settings from "./components/Settings";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
 
@@ -59,9 +60,10 @@ function App() {
 
     return (
       <ThemeProvider>
-        <div className="d-flex" style={{ height: "100vh", width: "100%", overflow: "hidden" }}>
+        <div className="d-flex w-100 h-100" style={{ flex: 1, overflow: "hidden" }}>
           <ActivityTracker />
           <FaceProctoring />
+          <LiveGPSTracker />
           <Sidebar />
           <MainContentWrapper />
         </div>
@@ -91,7 +93,8 @@ function MainContentWrapper() {
     location.pathname.startsWith('/hr/analytics') ||
     location.pathname.startsWith('/hr/projects') ||
     location.pathname.startsWith('/tracker') ||
-    location.pathname.startsWith('/sales');
+    location.pathname.startsWith('/sales') ||
+    location.pathname.startsWith('/admin/company');
 
   return (
     <div className={`flex-grow-1 ${isFullScreenPage ? 'p-0' : 'px-4 pb-4'}`} style={{
@@ -100,7 +103,6 @@ function MainContentWrapper() {
       display: 'flex',
       flexDirection: 'column',
       position: 'relative',
-      scrollBehavior: 'smooth',
       WebkitOverflowScrolling: 'touch'
     }}>
       {/* Global Header */}
@@ -118,6 +120,14 @@ function MainContentWrapper() {
           <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
           <Route path="/employees" element={<ProtectedRoute><Employees /></ProtectedRoute>} />
           <Route path="/company" element={<ProtectedRoute><CompanyManagement /></ProtectedRoute>} />
+          <Route 
+            path="/admin/company/:companyId" 
+            element={
+              <ProtectedRoute>
+                <CompanySpecificDashboard />
+              </ProtectedRoute>
+            } 
+          />
           <Route path="/activity-reports" element={<ProtectedRoute><ActivityReports /></ProtectedRoute>} />
           <Route path="/hr/leave" element={<ProtectedRoute><HRLeaveManagement /></ProtectedRoute>} />
           <Route path="/hr/payroll" element={<ProtectedRoute><HRPayroll /></ProtectedRoute>} />

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useNavigate } from "react-router-dom";
 import AddEmployee from "./AddEmployee";
@@ -86,6 +86,11 @@ const Employees = () => {
     setSelectedEmployee(employee);
     setEditForm(employee); // Reset edit form
     setIsEditing(false);   // Reset edit mode
+  };
+
+  const handleMonthlyTracking = (employee) => {
+    const employeeKey = employee.empId || employee.id || employee.userId || '';
+    navigate(`/activity-reports?employee=${encodeURIComponent(employeeKey)}&view=logins`);
   };
 
   const handleEditClick = () => {
@@ -318,7 +323,7 @@ const Employees = () => {
   return (
     <div style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '16px 20px 0', boxSizing: 'border-box' }}>
 
-      {/* ── Header Row ── */}
+      {/* â”€â”€ Header Row â”€â”€ */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--text-main)' }}>Employees</h1>
@@ -352,7 +357,7 @@ const Employees = () => {
         </div>
       </div>
 
-      {/* ── Search ── */}
+      {/* â”€â”€ Search â”€â”€ */}
       <div style={{ marginBottom: 14, flexShrink: 0 }}>
         <input
           type="text"
@@ -364,7 +369,7 @@ const Employees = () => {
         />
       </div>
 
-      {/* ── Table Card ── */}
+      {/* â”€â”€ Table Card â”€â”€ */}
       <div className="card shadow-sm" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRadius: 10 }}>
         <div className="card-header" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', padding: '10px 16px', flexShrink: 0 }}>
           <h5 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#fff' }}>Employee Directory ({filteredEmployees.length})</h5>
@@ -415,14 +420,37 @@ const Employees = () => {
                     <span className="badge bg-info" style={{ fontSize: '0.7rem' }}>{emp.certificates}</span>
                   </td>
                   <td style={{ ...cellStyle, overflow: 'visible' }}>
-                    <button onClick={() => handleViewDetails(emp)} className="btn btn-sm btn-info" title="View Details" style={{ padding: '2px 6px', fontSize: '0.75rem', marginRight: 4 }}>
-                      <i className="bi bi-eye"></i>
-                    </button>
-                    {isHR && (
-                      <button onClick={() => handleDeleteEmployee(emp.id)} className="btn btn-sm btn-danger" title="Delete" style={{ padding: '2px 6px', fontSize: '0.75rem' }}>
-                        <i className="bi bi-trash"></i>
-                      </button>
-                    )}
+                    <div className="d-flex align-items-center gap-2 justify-content-end">
+                      <div className="dropdown dropup">
+                        <button
+                          className="btn btn-sm btn-light border d-flex align-items-center justify-content-center"
+                          type="button"
+                          data-bs-toggle="dropdown"
+                          aria-expanded="false"
+                          title="More actions"
+                          style={{ width: '32px', height: '32px', padding: 0 }}
+                        >
+                          <i className="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul className="dropdown-menu dropdown-menu-end shadow-sm border-0 mb-2 mt-0" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+                          <li>
+                            <button className="dropdown-item" onClick={() => handleViewDetails(emp)} style={{ color: 'var(--text-main)' }}>
+                              <i className="bi bi-eye me-2"></i> View Details
+                            </button>
+                          </li>
+                          <li>
+                            <button className="dropdown-item" onClick={() => handleMonthlyTracking(emp)} style={{ color: 'var(--text-main)' }}>
+                              <i className="bi bi-graph-up-arrow me-2"></i> Monthly Tracking
+                            </button>
+                          </li>
+                        </ul>
+                      </div>
+                      {isHR && (
+                        <button onClick={() => handleDeleteEmployee(emp.id)} className="btn btn-sm btn-danger" title="Delete" style={{ padding: '2px 6px', fontSize: '0.75rem' }}>
+                          <i className="bi bi-trash"></i>
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -435,3 +463,4 @@ const Employees = () => {
 };
 
 export default Employees;
+
