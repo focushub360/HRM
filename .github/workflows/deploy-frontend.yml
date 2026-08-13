@@ -40,13 +40,27 @@ jobs:
 
       - name: Deploy Assets to S3
         run: |
-          aws s3 sync dist/ s3://${{ secrets.AWS_S3_BUCKET }} --delete --exclude "index.html"
+          # Sync new assets to S3 (keep existing hashed JS/CSS chunks to prevent 404s for cached clients)
+          aws s3 sync dist/ s3://${{ secrets.AWS_S3_BUCKET }} --exclude "index.html"
+          # Overwrite index.html with strict no-cache headers
           aws s3 cp dist/index.html s3://${{ secrets.AWS_S3_BUCKET }}/index.html --cache-control "max-age=0, no-cache, no-store, must-revalidate"
 
       - name: Invalidate CloudFront Cache
         continue-on-error: true
-        if: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID != '' }}
         run: |
-          aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
+          DIST_ID="${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}"
+          if [ -z "$DIST_ID" ]; then
+            echo "Auto-detecting CloudFront distribution ID for hrms.focusengineeringapp.com..."
+            DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items && contains(Aliases.Items, 'hrms.focusengineeringapp.com')].Id" --output text 2>/dev/null || true)
+          fi
+          if [ -z "$DIST_ID" ] || [ "$DIST_ID" = "None" ]; then
+            DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[0].Id" --output text 2>/dev/null || true)
+          fi
+          if [ -n "$DIST_ID" ] && [ "$DIST_ID" != "None" ]; then
+            echo "Found CloudFront Distribution: $DIST_ID. Creating invalidation..."
+            aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths "/*"
+          else
+            echo "No CloudFront distribution found to invalidate."
+          fi
 
 
