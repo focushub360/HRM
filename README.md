@@ -129,18 +129,20 @@ Sign in directly using any of the active accounts below (the Unified Login Syste
 | **Password** | `ZT@aeCZbu!fh` |
 | **Role** | HR Manager |
 
-*(Alternative Demo HR: `raj.kumar@techsolutions.com` / `Secure@123`)*
+*(Additional Focus Engineering HR: `priya@focus.com` / `AN7zeUnc326h`)*
 
 ---
 
 #### 👤 3. Employee Portal (Staff & Field Agents)
 *Employee access for daily check-in, EOD checkout work summaries, leave requests, real-time chat, and project task status tracking.*
 
-| # | Name | Email | Password | Role / Department | Type |
-|---|------|-------|----------|-------------------|------|
-| 1 | **Office Employee** | `offemp@gmail.com` | `yf3fdnl#Vi$y` | Office Operations | Office |
-| 2 | **Mobile Sales Agent** | `sales@test.com` | `salestest` | Sales & Client Visits | Sales (Field) |
-| 3 | **Engineering Staff** | `alice@techsolutions.com` | `password` | Software Engineering | Office |
+| # | Name | Email | Password | Company | Role / Department | Type |
+|---|------|-------|----------|---------|-------------------|------|
+| 1 | **Bharathan** | `bv@focus.com` | `7OGPHZ@Ob3cU` | Focus Engineering | Staff (General) | Office |
+| 2 | **Vicky** | `bharathanvicky@gmail.com` | `dWqRBd05ukc@` | Focus Engineering | Staff (General) | Office |
+| 3 | **Alice Johnson** | `alice@techsolutions.com` | `password` | Tech Solutions | Sales Manager | Office |
+| 4 | **Bob Smith** | `bob@techsolutions.com` | `password` | Tech Solutions | Software Engineer | Office |
+| 5 | **Mobile Sales** | `sales@test.com` | `salestest` | Tech Solutions | Sales Field Agent | Sales (Field) |
 
 ---
 
