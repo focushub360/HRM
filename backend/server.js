@@ -17,12 +17,22 @@ const start = async () => {
   await connectDB();
 
   const httpServer = createServer(app);
+  const KNOWN_ORIGINS = [
+    'https://hrms.focusengineeringapp.com',
+    'https://www.hrms.focusengineeringapp.com',
+    'http://localhost:5173',
+    'http://localhost:3000',
+  ];
+  const envOrigins = process.env.CORS_ORIGIN && process.env.CORS_ORIGIN !== '*'
+    ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+    : [];
+  const socketOrigins = [...new Set([...KNOWN_ORIGINS, ...envOrigins])];
+
   const io = new Server(httpServer, {
     cors: {
-      origin: process.env.CORS_ORIGIN && process.env.CORS_ORIGIN !== '*'
-        ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
-        : '*',
-      methods: ['GET', 'POST']
+      origin: socketOrigins,
+      methods: ['GET', 'POST'],
+      credentials: true,
     }
   });
 
