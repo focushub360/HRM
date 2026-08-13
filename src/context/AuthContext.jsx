@@ -165,22 +165,42 @@ export const AuthProvider = ({ children }) => {
   const authenticate = async (type, email, password) => {
     try {
       console.log('🔐 AuthContext.authenticate called with:', { type, email });
-      const response = await fetch(`${API_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, email, password }),
-      });
+      
+      const rolesToTry = type ? [type] : ['company', 'hr', 'employee'];
 
-      console.log('📡 API Response status:', response.status);
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error('❌ API Error response:', errText);
-        return null;
+      for (const role of rolesToTry) {
+        try {
+          const response = await fetch(`${API_URL}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: role, email, password }),
+          });
+
+          if (response.ok) {
+            const userData = await response.json();
+            console.log('✅ Authenticated user:', userData);
+            return userData;
+          }
+        } catch (fetchErr) {
+          console.warn(`Attempt for role [${role}] failed:`, fetchErr);
+        }
       }
 
-      const userData = await response.json();
-      console.log('✅ Authenticated user:', userData);
-      return userData;
+      // If all role-scoped attempts failed, try a single payload without type (in case backend is universal)
+      try {
+        const fallbackRes = await fetch(`${API_URL}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        if (fallbackRes.ok) {
+          return await fallbackRes.json();
+        }
+      } catch (e) {
+        // ignore
+      }
+
+      return null;
     } catch (error) {
       console.error('Authentication error:', error);
       return null;
