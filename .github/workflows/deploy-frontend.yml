@@ -32,8 +32,8 @@ jobs:
       - name: Build Application
         run: npm run build
         env:
-          VITE_API_URL: https://hrms-backend-22uq.onrender.com/api
-          VITE_SOCKET_URL: https://hrms-backend-22uq.onrender.com
+          VITE_API_URL: /api
+          VITE_SOCKET_URL: ""
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
