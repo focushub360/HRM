@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { API_URL, SOCKET_URL } from '../config.js';
 
 const AuthContext = createContext();
-const API_URL = `${import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://hrms-backend-22uq.onrender.com/api')}`;
 
 export const AuthProvider = ({ children }) => {
   // Initialize state from sessionStorage if available (Session only)
