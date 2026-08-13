@@ -35,6 +35,9 @@ export const getProjectsWithTasks = asyncHandler(async (req, res) => {
     })
   );
 
+  res.json(combined);
+});
+
 // PUT /api/projects/:id
 export const updateProject = asyncHandler(async (req, res) => {
   const cid = req.params.id;
