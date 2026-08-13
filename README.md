@@ -85,46 +85,62 @@ Simply double-click **`START_PROJECT.bat`** in the root directory.
 
 ---
 
-## 📝 Credentials & Configuration
+## 📝 Focus Engineering Credentials & Configuration
 
 ---
 
-### 🔐 Default Login Credentials
+### 🌐 Live Production URLs
+
+| Service | URL |
+|---------|-----|
+| **Production Web Portal** | [https://hrms.focusengineeringapp.com](https://hrms.focusengineeringapp.com) |
+| **S3 Origin Mirror** | [http://focus-hrms-frontend-2026.s3-website.ap-south-1.amazonaws.com](http://focus-hrms-frontend-2026.s3-website.ap-south-1.amazonaws.com) |
+| **Production API (Backend)** | `https://hrms-backend-22uq.onrender.com/api` |
+| **Local Web Portal** | `http://localhost:5173` |
+| **Local API Server** | `http://localhost:5000/api` |
+
+---
+
+### 🔐 Focus Engineering Login Credentials
 
 Sign in directly using any of the active accounts below (the Unified Login System handles role routing automatically).
 
 ---
 
-#### 🏢 Company Portal (System Admin)
-*Super Admin access to manage companies and global settings.*
+#### 🏢 1. Company Admin / Super Admin Portal
+*Super Admin access to manage companies, departments, global permissions, and settings.*
 
 | Field | Value |
 |-------|-------|
+| **Company** | **Focus Engineering** |
 | **Email** | `admin@focus.com` |
 | **Password** | `Focus@123` |
-| **Name** | Admin User |
+| **Role** | System / Company Admin |
 
 ---
 
-#### 👔 HR Manager Portal (Administrative Access)
-*HR/Admin access to manage employees, attendance, and payroll for a specific company (Cobinno).*
+#### 👔 2. HR Manager Portal
+*HR management access to approve leaves/permissions, view live daily work logs, inspect employee activity reports, and manage attendance/payroll.*
 
 | Field | Value |
 |-------|-------|
+| **Company** | **Focus Engineering** |
 | **Email** | `hr@focus.com` |
 | **Password** | `ZT@aeCZbu!fh` |
-| **Name** | hr |
-| **Company** | Cobinno |
+| **Role** | HR Manager |
+
+*(Alternative Demo HR: `raj.kumar@techsolutions.com` / `Secure@123`)*
 
 ---
 
-#### 👤 Employee Portal (Staff Portal)
-*Standard employee access for attendance, tracking, and dashboard.*
+#### 👤 3. Employee Portal (Staff & Field Agents)
+*Employee access for daily check-in, EOD checkout work summaries, leave requests, real-time chat, and project task status tracking.*
 
-| # | Name | Email | Password | Role / Department |
-|---|------|-------|----------|-------------------|
-| 1 | EMP | `offemp@gmail.com` | `yf3fdnl#Vi$y` | Office (Unassigned) |
-| 2 | Mobile Sales Tester | `sales@test.com` | `salestest` | Sales Field Agent |
+| # | Name | Email | Password | Role / Department | Type |
+|---|------|-------|----------|-------------------|------|
+| 1 | **Office Employee** | `offemp@gmail.com` | `yf3fdnl#Vi$y` | Office Operations | Office |
+| 2 | **Mobile Sales Agent** | `sales@test.com` | `salestest` | Sales & Client Visits | Sales (Field) |
+| 3 | **Engineering Staff** | `alice@techsolutions.com` | `password` | Software Engineering | Office |
 
 ---
 
