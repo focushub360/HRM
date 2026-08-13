@@ -10,6 +10,7 @@ on:
       - 'index.html'
       - 'package.json'
       - 'vite.config.js'
+      - '.env*'
       - '.github/workflows/deploy-frontend.yml'
   workflow_dispatch:
 
@@ -31,7 +32,8 @@ jobs:
       - name: Build Application
         run: npm run build
         env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://hrms-backend-22uq.onrender.com/api' }}
+          VITE_SOCKET_URL: ${{ secrets.VITE_SOCKET_URL || 'https://hrms-backend-22uq.onrender.com' }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
