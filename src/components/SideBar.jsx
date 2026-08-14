@@ -32,7 +32,7 @@ import "/src/App.css";
 const SideBar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout, hasPermission } = useAuth();
+  const { user, logout, hasPermission, leaveRequests, notifications } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
   // State for sidebar visibility
@@ -164,6 +164,16 @@ const SideBar = () => {
         <ul className="nav-list">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
+            
+            // Calculate badge count
+            let badgeCount = 0;
+            if (item.name === "Leave Management" || item.name === "Leaves & Permissions") {
+              badgeCount = leaveRequests?.filter(l => l.status === 'Pending').length || 0;
+            } else if (item.name === "Chat") {
+              // Using general notifications as chat unread count for now, since chat unread is not natively tracked
+              badgeCount = notifications?.filter(n => !n.read).length || 0; 
+            }
+
             return (
               <li
                 key={item.name}
@@ -173,9 +183,27 @@ const SideBar = () => {
                 }}
                 className={`nav-item ${isActive ? "active" : ""}`}
                 title={item.name}
+                style={{ position: 'relative', display: 'flex', alignItems: 'center', fontFamily: '"Inter", sans-serif', padding: '12px 16px' }}
               >
-                <span className="icon">{item.icon}</span>
-                <span>{item.name}</span>
+                <div style={{ display: 'flex', alignItems: 'center', flexGrow: 1, gap: '14px' }}>
+                  <span className="icon" style={{ display: 'flex', alignItems: 'center', fontSize: '1.2rem' }}>{item.icon}</span>
+                  <span style={{ fontSize: '14px', fontWeight: 500, letterSpacing: '0.3px' }}>{item.name}</span>
+                </div>
+                {badgeCount > 0 && (
+                  <span style={{
+                    background: '#ef4444',
+                    color: 'white',
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                    padding: '2px 6px',
+                    borderRadius: '10px',
+                    marginLeft: 'auto',
+                    minWidth: '20px',
+                    textAlign: 'center'
+                  }}>
+                    {badgeCount > 99 ? '99+' : badgeCount}
+                  </span>
+                )}
               </li>
             );
           })}

@@ -136,6 +136,11 @@ export const AuthProvider = ({ children }) => {
         if (notifRes.ok) {
           const notifData = await notifRes.json();
           setNotifications(notifData);
+          
+          // Auto-clear unread notification badges after 8 seconds
+          setTimeout(() => {
+            setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+          }, 8000);
         }
 
       } catch (error) {
@@ -166,6 +171,11 @@ export const AuthProvider = ({ children }) => {
 
     newSocket.on('new-notification', (notif) => {
       setNotifications(prev => [notif, ...prev]);
+      
+      // Auto-clear this unread notification badge after 8 seconds
+      setTimeout(() => {
+        setNotifications(prev => prev.map(n => n.id === notif.id || n._id === notif._id ? { ...n, read: true } : n));
+      }, 8000);
     });
 
     return () => {
