@@ -163,10 +163,16 @@ const Chat = () => {
 
   // Filtered employees for Direct Messages list
   const filteredUsers = useMemo(() => {
-    const currentUserId = user?.empId || user?.id || user?.email;
     return companyEmployees.filter(emp => {
-      const empId = emp.id || emp.empId || emp.email;
-      if (empId === currentUserId) return false;
+      // Check if it's the current user (using all possible ID fields to be safe)
+      if (
+        String(emp.id) === String(user.id) || 
+        String(emp.empId) === String(user.empId) || 
+        (emp.email && user.email && emp.email === user.email)
+      ) {
+        return false;
+      }
+      
       if (!searchUserQuery) return true;
       const q = searchUserQuery.toLowerCase();
       return (emp.name && emp.name.toLowerCase().includes(q)) ||

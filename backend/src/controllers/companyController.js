@@ -10,7 +10,7 @@ export const getCompanies = asyncHandler(async (req, res) => {
   
   const companiesWithEmployees = companies.map(company => {
     // Attach employees to the company object to match the frontend expectations
-    company.employeeAccounts = employees.filter(emp => emp.companyId === company.id);
+    company.employeeAccounts = employees.filter(emp => String(emp.companyId) === String(company.id));
     // Remove _id for clean json response matching the old schema
     delete company._id;
     delete company.__v;
