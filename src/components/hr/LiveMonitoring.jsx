@@ -3,19 +3,24 @@ import { useAuth } from '../../context/AuthContext';
 import { FaUserShield, FaVideo, FaCircle } from 'react-icons/fa';
 
 const LiveMonitoring = () => {
-  const { user } = useAuth();
+  const { user, companies } = useAuth();
   const [proctoringData, setProctoringData] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchProctoringData = async () => {
     try {
-      const API_URL = import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://hrms-backend-22uq.onrender.com/api')}`;
+      const API_URL = import.meta.env.VITE_API_URL || String(import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://hrms-backend-22uq.onrender.com/api'));
       const res = await fetch(`${API_URL}/companies/${user.companyId}/proctoring`);
       const data = await res.json();
       
-      // Group by user to show only the latest status per employee
+      const currentCompany = companies?.find(c => String(c.id) === String(user.companyId));
+      const activeEmpIds = new Set((currentCompany?.employeeAccounts || []).map(e => String(e.empId)));
+
+      // Group by user to show only the latest status per active employee
       const latestData = {};
       data.forEach(log => {
+        if (!activeEmpIds.has(String(log.empId))) return; // Skip deleted employees
+
         if (!latestData[log.empId]) {
           latestData[log.empId] = log;
         } else {
