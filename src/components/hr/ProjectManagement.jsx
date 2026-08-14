@@ -853,14 +853,13 @@ const ProjectManagement = () => {
                     </Field>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                        <Field label="Assign To *">
+                        <Field label="Assign Employee *">
                             <Sel required value={tForm.assignedTo}
                                 onChange={e => setTForm(p => ({ ...p, assignedTo: e.target.value }))}>
-                                <option value="">Select member…</option>
+                                <option value="">Select employee…</option>
                                 {employees
-                                    .filter(emp => targetProject?.teamMembers?.some(m => m.id === emp.id))
                                     .map(emp => {
-                                        const role = targetProject.teamMembers.find(m => m.id === emp.id)?.role;
+                                        const role = targetProject?.teamMembers?.find(m => String(m.id) === String(emp.id))?.role;
                                         return <option key={emp.id} value={emp.id}>{emp.name}{role ? ` · ${role}` : ''}</option>;
                                     })
                                 }
