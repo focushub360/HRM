@@ -472,16 +472,8 @@ const ProjectManagement = () => {
         if (companies && user?.companyId) {
             const co = companies.find(c => c.id === parseInt(user.companyId));
             if (co) {
-                // Filter to only include regular employees (no HRs) 
-                // and only those "below" the logged-in HR (or legacy employees with no HR assigned)
-                let subordinates = co.employeeAccounts || [];
-                
-                if (user.type === 'hr') {
-                    subordinates = subordinates.filter(emp => 
-                        !emp.headHrId || String(emp.headHrId) === String(user.id) || String(emp.headHrId) === String(user.empId)
-                    );
-                }
-                
+                // Only include regular employees (exclude HRs)
+                const subordinates = co.employeeAccounts || [];
                 // We add the flag just in case the UI mapping still checks for it
                 setEmployees(subordinates.map(e => ({ ...e, _isHr: false })));
             } else {
