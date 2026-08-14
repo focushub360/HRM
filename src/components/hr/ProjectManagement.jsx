@@ -471,7 +471,16 @@ const ProjectManagement = () => {
     useEffect(() => {
         if (companies && user?.companyId) {
             const co = companies.find(c => c.id === parseInt(user.companyId));
-            setEmployees(co?.employeeAccounts || []);
+            if (co) {
+                // Combine both employees and HRs so projects can be assigned to anyone in the company
+                const allTeam = [
+                    ...(co.employeeAccounts || []),
+                    ...(co.hrAccounts || [])
+                ];
+                setEmployees(allTeam);
+            } else {
+                setEmployees([]);
+            }
         }
     }, [user, companies]);
 
