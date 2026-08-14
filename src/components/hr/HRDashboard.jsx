@@ -63,12 +63,11 @@ const HRDashboard = () => {
       }
     });
 
-    if (result && result.employeeAccount) {
+    if (result && result.error) {
+      alert(result.error);
+    } else if (result && result.employeeAccount) {
       setNewEmployee({ name: "", email: "", employeeType: "office", role: "employee", shiftStartTime: "09:00", shiftEndTime: "18:00" });
       setShowAddEmployee(false);
-      // alert(
-      //   `Employee created successfully!\n\nEmployee ID: ${result.employeeAccount.empId}\nPassword: ${result.employeeAccount.password}\nType: ${result.employeeAccount.employeeType}`
-      // );
       setSuccessModal({
         isOpen: true,
         title: "Employee Created!",

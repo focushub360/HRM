@@ -200,7 +200,9 @@ const AddEmployee = () => {
 
     setIsSubmitting(false);
 
-    if (result) {
+    if (result && result.error) {
+      alert(result.error);
+    } else if (result && result.employeeAccount) {
       alert("Employee added successfully!");
       setSubmitted(true);
       // Reset form

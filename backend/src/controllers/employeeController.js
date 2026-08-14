@@ -12,6 +12,12 @@ export const addEmployeeToCompany = asyncHandler(async (req, res) => {
   const company = await Company.findOne({ id: Number(req.params.companyId) });
   if (!company) return res.status(404).json({ error: 'Company not found' });
 
+  // Ensure unique email ID
+  const existingEmployee = await Employee.findOne({ email });
+  if (existingEmployee) {
+    return res.status(400).json({ error: 'This email ID is already registered to an employee.' });
+  }
+
   const empId = `EMP-${company.code}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
   const password = generatePassword();
   const newId = await getNextSequence('employeeId');
@@ -89,6 +95,14 @@ export const removeEmployeeFromCompany = asyncHandler(async (req, res) => {
 export const updateEmployeeInCompany = asyncHandler(async (req, res) => {
   const company = await Company.findOne({ id: Number(req.params.companyId) });
   if (!company) return res.status(404).json({ error: 'Employee not found or update failed' });
+
+  // Ensure unique email ID if it's being updated
+  if (req.body.email) {
+    const existingEmployee = await Employee.findOne({ email: req.body.email, id: { $ne: parseInt(req.params.employeeId) } });
+    if (existingEmployee) {
+      return res.status(400).json({ error: 'This email ID is already registered to another employee.' });
+    }
+  }
 
   const updated = await Employee.findOneAndUpdate(
     { id: parseInt(req.params.employeeId), companyId: company.id },

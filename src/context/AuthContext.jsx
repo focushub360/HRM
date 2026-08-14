@@ -332,7 +332,10 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify(employeeData),
       });
 
-      if (!response.ok) throw new Error('Failed to add employee');
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to add employee');
+      }
 
       const result = await response.json();
 
@@ -349,7 +352,7 @@ export const AuthProvider = ({ children }) => {
       return result;
     } catch (error) {
       console.error('Error adding employee:', error);
-      return null;
+      return { error: error.message };
     }
   };
 
