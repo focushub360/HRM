@@ -17,12 +17,13 @@ export const addEmployeeToCompany = asyncHandler(async (req, res) => {
   const newId = await getNextSequence('employeeId');
 
   const employee = await Employee.create({
+    ...req.body,
     id: newId,
     companyId: company.id,
     name: req.body.name || 'Unknown',
     email: req.body.email || 'No Email',
     empId,
-    password,
+    password, // Store generated or frontend-provided password
     employeeType: req.body.employeeType || 'office',
     department: req.body.department || 'Unassigned',
     position: req.body.position || 'TBD',

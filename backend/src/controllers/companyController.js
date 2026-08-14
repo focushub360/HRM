@@ -5,8 +5,23 @@ import asyncHandler from '../utils/asyncHandler.js';
 
 // GET /api/companies
 export const getCompanies = asyncHandler(async (req, res) => {
-  const companies = await Company.find().sort({ id: 1 });
-  res.json(companies);
+  const companies = await Company.find().sort({ id: 1 }).lean();
+  const employees = await Employee.find().lean();
+  
+  const companiesWithEmployees = companies.map(company => {
+    // Attach employees to the company object to match the frontend expectations
+    company.employeeAccounts = employees.filter(emp => emp.companyId === company.id);
+    // Remove _id for clean json response matching the old schema
+    delete company._id;
+    delete company.__v;
+    company.employeeAccounts.forEach(emp => {
+      delete emp._id;
+      delete emp.__v;
+    });
+    return company;
+  });
+
+  res.json(companiesWithEmployees);
 });
 
 // GET /api/companies/:id
