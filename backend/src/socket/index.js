@@ -1,9 +1,12 @@
+let ioInstance = null;
+
 export const registerSocketHandlers = (io) => {
+  ioInstance = io;
   io.on('connection', (socket) => {
     console.log('New client connected:', socket.id);
 
     socket.on('join-room', (userId) => {
-      socket.join(userId);
+      socket.join(String(userId));
       console.log(`Socket ${socket.id} joined room ${userId}`);
     });
 
@@ -21,3 +24,5 @@ export const registerSocketHandlers = (io) => {
     });
   });
 };
+
+export const getIO = () => ioInstance;

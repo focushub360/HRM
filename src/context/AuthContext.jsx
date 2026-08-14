@@ -1,4 +1,5 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
+import { io } from 'socket.io-client';
 import { API_URL, SOCKET_URL } from '../config.js';
 
 const AuthContext = createContext();
@@ -25,6 +26,7 @@ export const AuthProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [leaveRequests, setLeaveRequests] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [socket, setSocket] = useState(null);
 
   /* REMOVED SINGLE-RUN EFFECT */
 
@@ -125,6 +127,17 @@ export const AuthProvider = ({ children }) => {
           console.error("Failed to fetch leave requests:", leaveRes.status);
         }
 
+        // Fetch Notifications
+        let notifUrl = `${API_URL}/notifications/${user.empId || user.id}`;
+        if (user.type === 'hr' || user.type === 'company') {
+          notifUrl = `${API_URL}/notifications/${user.companyId}`;
+        }
+        const notifRes = await fetch(notifUrl);
+        if (notifRes.ok) {
+          const notifData = await notifRes.json();
+          setNotifications(notifData);
+        }
+
       } catch (error) {
         console.error('Error fetching logs/alerts:', error);
       } finally {
@@ -134,6 +147,31 @@ export const AuthProvider = ({ children }) => {
 
     fetchData();
   }, [isAuthenticated, user]);
+
+  // Socket Connection for Real-time Notifications
+  useEffect(() => {
+    if (!isAuthenticated || !user) {
+      if (socket) {
+        socket.disconnect();
+        setSocket(null);
+      }
+      return;
+    }
+
+    const newSocket = io(SOCKET_URL);
+    setSocket(newSocket);
+
+    const roomId = user.type === 'hr' || user.type === 'company' ? user.companyId : (user.empId || user.id);
+    newSocket.emit('join-room', String(roomId));
+
+    newSocket.on('new-notification', (notif) => {
+      setNotifications(prev => [notif, ...prev]);
+    });
+
+    return () => {
+      newSocket.disconnect();
+    };
+  }, [isAuthenticated, user?.id, user?.empId]);
 
   const login = (userData) => {
     sessionStorage.setItem('user', JSON.stringify(userData));
@@ -545,10 +583,17 @@ export const AuthProvider = ({ children }) => {
     return filtered;
   };
 
-  const markNotificationAsRead = (notificationId) => {
+  const markNotificationAsRead = async (notificationId) => {
     setNotifications((prev) =>
-      prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n))
+      prev.map((n) => ((n.id || n._id) === notificationId ? { ...n, read: true } : n))
     );
+    try {
+      await fetch(`${API_URL}/notifications/${notificationId}/read`, {
+        method: 'PUT',
+      });
+    } catch (err) {
+      console.error('Failed to mark notification as read:', err);
+    }
   };
 
   // --- NEW LEAVE MANAGEMENT FUNCTIONS ---

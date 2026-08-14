@@ -1,5 +1,7 @@
 import Project from '../models/Project.js';
 import Task from '../models/Task.js';
+import Notification from '../models/Notification.js';
+import { getIO } from '../socket/index.js';
 import asyncHandler from '../utils/asyncHandler.js';
 
 // POST /api/projects
@@ -9,6 +11,25 @@ export const addProject = asyncHandler(async (req, res) => {
     status: 'Active',
     createdAt: new Date().toISOString()
   });
+
+  if (project.teamMembers && project.teamMembers.length > 0) {
+    const io = getIO();
+    for (const member of project.teamMembers) {
+      if (member.id) {
+        const notif = await Notification.create({
+          recipientId: String(member.id),
+          title: 'Added to Project',
+          message: `You have been added to the project: ${project.title}`,
+          type: 'project',
+          createdAt: new Date().toISOString()
+        });
+        if (io) {
+          io.to(String(member.id)).emit('new-notification', notif);
+        }
+      }
+    }
+  }
+
   res.status(201).json(project);
 });
 

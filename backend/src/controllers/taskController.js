@@ -1,4 +1,6 @@
 import Task from '../models/Task.js';
+import Notification from '../models/Notification.js';
+import { getIO } from '../socket/index.js';
 import asyncHandler from '../utils/asyncHandler.js';
 
 // POST /api/tasks  (sales task)
@@ -50,6 +52,22 @@ export const addProjectTask = asyncHandler(async (req, res) => {
     createdAt: new Date().toISOString(),
     type: 'PROJECT_TASK'
   });
+
+  if (task.assignedTo) {
+    const notif = await Notification.create({
+      recipientId: String(task.assignedTo),
+      title: 'New Task Assigned',
+      message: `You have been assigned to task: ${task.title} in project ${task.projectTitle || ''}`,
+      type: 'task',
+      createdAt: new Date().toISOString()
+    });
+    
+    const io = getIO();
+    if (io) {
+      io.to(String(task.assignedTo)).emit('new-notification', notif);
+    }
+  }
+
   res.status(201).json(task);
 });
 
