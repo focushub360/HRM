@@ -472,12 +472,18 @@ const ProjectManagement = () => {
         if (companies && user?.companyId) {
             const co = companies.find(c => c.id === parseInt(user.companyId));
             if (co) {
-                // Combine both employees and HRs so projects can be assigned to anyone in the company
-                const allTeam = [
-                    ...(co.employeeAccounts || []),
-                    ...(co.hrAccounts || [])
-                ];
-                setEmployees(allTeam);
+                // Filter to only include regular employees (no HRs) 
+                // and only those "below" the logged-in HR (or legacy employees with no HR assigned)
+                let subordinates = co.employeeAccounts || [];
+                
+                if (user.type === 'hr') {
+                    subordinates = subordinates.filter(emp => 
+                        !emp.headHrId || String(emp.headHrId) === String(user.id) || String(emp.headHrId) === String(user.empId)
+                    );
+                }
+                
+                // We add the flag just in case the UI mapping still checks for it
+                setEmployees(subordinates.map(e => ({ ...e, _isHr: false })));
             } else {
                 setEmployees([]);
             }
@@ -774,47 +780,53 @@ const ProjectManagement = () => {
                             </span>
                         </div>
                         <div style={{ maxHeight: 220, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 7 }}>
-                            {employees.length === 0
-                                ? <p style={{ textAlign: 'center', color: 'var(--text-muted, #6b7280)', fontSize: 13 }}>No employees found.</p>
-                                : employees.map((emp, i) => {
-                                    const selected = pForm.teamMembers.find(m => m.id === emp.id);
-                                    const color = ['#4f46e5','#7c3aed','#10b981','#f59e0b','#ef4444','#06b6d4'][i % 6];
-                                    return (
-                                        <div key={emp.id} onClick={() => toggleMember(emp.id)} style={{
-                                            display: 'flex', alignItems: 'center', gap: 10,
-                                            padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
-                                            border: `1.5px solid ${selected ? '#4f46e5' : 'rgba(0,0,0,0.07)'}`,
-                                            background: selected ? 'rgba(79,70,229,0.06)' : 'transparent',
-                                            transition: 'all 0.15s',
-                                        }}>
-                                            <Avatar name={emp.name} size={34} color={color} />
-                                            <div style={{ flexGrow: 1 }}>
-                                                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-main)' }}>{emp.name}</div>
-                                                <div style={{ fontSize: 11, color: 'var(--text-muted, #6b7280)' }}>{emp.designation || emp.employeeType || 'Employee'}</div>
-                                            </div>
-                                            {selected && (
-                                                <input type="text" placeholder="Role (e.g. Lead)"
-                                                    value={selected.role}
-                                                    onClick={e => e.stopPropagation()}
-                                                    onChange={e => {
-                                                        const role = e.target.value;
-                                                        setPForm(prev => ({ ...prev, teamMembers: prev.teamMembers.map(m => m.id === emp.id ? { ...m, role } : m) }));
-                                                    }}
-                                                    style={{ ...inputStyle, width: 120, padding: '6px 10px', fontSize: 12, margin: 0 }}
-                                                />
-                                            )}
-                                            <div style={{
-                                                width: 18, height: 18, borderRadius: 5, flexShrink: 0,
-                                                border: `2px solid ${selected ? '#4f46e5' : 'rgba(0,0,0,0.15)'}`,
-                                                background: selected ? '#4f46e5' : 'transparent',
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            {employees.length === 0 ? (
+                                <p style={{ textAlign: 'center', color: 'var(--text-muted, #6b7280)', fontSize: 13 }}>No employees found. (If you just logged in, please refresh your browser!)</p>
+                            ) : (
+                                <>
+                                    {employees.length > 0 && (
+                                        <div style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', margin: '5px 0 2px 4px' }}>EMPLOYEES</div>
+                                    )}
+                                    {employees.map((emp, i) => {
+                                        const selected = pForm.teamMembers.find(m => m.id === emp.id);
+                                        const color = ['#4f46e5','#7c3aed','#10b981','#f59e0b','#ef4444','#06b6d4'][i % 6];
+                                        return (
+                                            <div key={emp.id} onClick={() => toggleMember(emp.id)} style={{
+                                                display: 'flex', alignItems: 'center', gap: 10,
+                                                padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
+                                                border: `1.5px solid ${selected ? '#4f46e5' : 'rgba(0,0,0,0.07)'}`,
+                                                background: selected ? 'rgba(79,70,229,0.06)' : 'transparent',
+                                                transition: 'all 0.15s',
                                             }}>
-                                                {selected && <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="white" strokeWidth="2" strokeLinecap="round"/></svg>}
+                                                <Avatar name={emp.name} size={34} color={color} />
+                                                <div style={{ flexGrow: 1 }}>
+                                                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-main)' }}>{emp.name}</div>
+                                                    <div style={{ fontSize: 11, color: 'var(--text-muted, #6b7280)' }}>{emp.designation || emp.employeeType || 'Employee'}</div>
+                                                </div>
+                                                {selected && (
+                                                    <input type="text" placeholder="Role (e.g. Lead)"
+                                                        value={selected.role}
+                                                        onClick={e => e.stopPropagation()}
+                                                        onChange={e => {
+                                                            const role = e.target.value;
+                                                            setPForm(prev => ({ ...prev, teamMembers: prev.teamMembers.map(m => m.id === emp.id ? { ...m, role } : m) }));
+                                                        }}
+                                                        style={{ ...inputStyle, width: 120, padding: '6px 10px', fontSize: 12, margin: 0 }}
+                                                    />
+                                                )}
+                                                <div style={{
+                                                    width: 18, height: 18, borderRadius: 5, flexShrink: 0,
+                                                    border: `2px solid ${selected ? '#4f46e5' : 'rgba(0,0,0,0.15)'}`,
+                                                    background: selected ? '#4f46e5' : 'transparent',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                }}>
+                                                    {selected && <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="white" strokeWidth="2" strokeLinecap="round"/></svg>}
+                                                </div>
                                             </div>
-                                        </div>
-                                    );
-                                })
-                            }
+                                        );
+                                    })}
+                                </>
+                            )}
                         </div>
                     </div>
 
