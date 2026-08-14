@@ -17,8 +17,9 @@ const TASK_STATUS = {
 const API = `${import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://hrms-backend-22uq.onrender.com/api')}`;
 
 // ─── Avatar ──────────────────────────────────────────────────────────────────
-const Avatar = ({ name = '', size = 36, color = '#4f46e5' }) => {
-    const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+const Avatar = ({ name, size = 36, color = '#4f46e5' }) => {
+    const safeName = typeof name === 'string' ? name : '';
+    const initials = safeName.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
     return (
         <div style={{
             width: size, height: size, borderRadius: '50%',
@@ -27,7 +28,7 @@ const Avatar = ({ name = '', size = 36, color = '#4f46e5' }) => {
             flexShrink: 0, border: `2px solid ${color}44`,
             fontFamily: 'Inter, sans-serif',
         }}>
-            {initials}
+            {initials || '?'}
         </div>
     );
 };
