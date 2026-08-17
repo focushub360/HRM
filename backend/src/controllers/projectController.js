@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Project from '../models/Project.js';
 import Task from '../models/Task.js';
 import Notification from '../models/Notification.js';
@@ -62,8 +63,14 @@ export const getProjectsWithTasks = asyncHandler(async (req, res) => {
 // PUT /api/projects/:id
 export const updateProject = asyncHandler(async (req, res) => {
   const cid = req.params.id;
-  const numId = Number(cid);
-  const query = isNaN(numId) ? { $or: [{ id: cid }, { _id: cid }] } : { $or: [{ id: numId }, { id: cid }] };
+  
+  let query;
+  if (mongoose.Types.ObjectId.isValid(cid)) {
+    query = { _id: cid };
+  } else {
+    const numId = Number(cid);
+    query = isNaN(numId) ? { id: cid } : { $or: [{ id: numId }, { id: cid }] };
+  }
   
   const updated = await Project.findOneAndUpdate(
     query,
@@ -74,4 +81,30 @@ export const updateProject = asyncHandler(async (req, res) => {
     return res.status(404).json({ error: 'Project not found' });
   }
   res.json(updated);
+});
+
+// DELETE /api/projects/:id
+export const deleteProject = asyncHandler(async (req, res) => {
+  const cid = req.params.id;
+  
+  let query;
+  if (mongoose.Types.ObjectId.isValid(cid)) {
+    query = { _id: cid };
+  } else {
+    const numId = Number(cid);
+    query = isNaN(numId) ? { id: cid } : { $or: [{ id: numId }, { id: cid }] };
+  }
+  
+  const project = await Project.findOne(query);
+  if (!project) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+
+  // Delete all tasks associated with this project
+  await Task.deleteMany({ projectId: project.id || project._id.toString() });
+  
+  // Delete the project
+  await Project.deleteOne(query);
+
+  res.json({ message: 'Project and associated tasks deleted successfully' });
 });

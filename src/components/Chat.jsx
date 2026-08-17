@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://hrms-backend-22uq.onrender.com/api');
 
 const Chat = () => {
-  const { user, companies } = useAuth();
+  const { user, companies, socket, setChatUnreadCount } = useAuth();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [activeTab, setActiveTab] = useState("company"); // company, hr, broadcast, team, dm
@@ -40,8 +40,16 @@ const Chat = () => {
       role: 'HR Manager',
       department: 'HR'
     }));
-    return [...hrList, ...list];
-  }, [companies, activeCompanyId]);
+    const allEmployees = [...hrList, ...list];
+    
+    // Filter out the currently logged-in user
+    return allEmployees.filter(emp => {
+      const isSameEmail = emp.email && user?.email && emp.email === user.email;
+      const isSameId = emp.id && (emp.id === user?.id || emp.id === user?.empId);
+      const isSameEmpId = emp.empId && (emp.empId === user?.id || emp.empId === user?.empId);
+      return !isSameEmail && !isSameId && !isSameEmpId;
+    });
+  }, [companies, activeCompanyId, user]);
 
   // Unique departments in active company
   const departments = useMemo(() => {
@@ -100,12 +108,57 @@ const Chat = () => {
     }
   };
 
-  // Poll for real-time messages every 3.5 seconds
+  // Fetch on tab switch
   useEffect(() => {
     fetchMessages();
-    const interval = setInterval(fetchMessages, 3500);
-    return () => clearInterval(interval);
   }, [activeTab, targetTeam, targetUser, activeCompanyId]);
+
+  // Reset unread count when viewing chat
+  useEffect(() => {
+    if (setChatUnreadCount) {
+      setChatUnreadCount(0);
+    }
+  }, [activeTab, setChatUnreadCount]);
+
+  // Real-time Socket.io listener
+  useEffect(() => {
+    if (!socket) return;
+    
+    const handleNewMessage = (msg) => {
+      // Check if it belongs to current active tab context
+      let shouldAppend = false;
+      if (activeTab === 'dm' && msg.channel === 'dm') {
+        const currentUserId = user?.empId || user?.id || user?.email;
+        const chatPartnerId = targetUser?.id || targetUser?.empId || targetUser?.email;
+        if (
+          (msg.senderId === currentUserId && msg.receiverId === chatPartnerId) ||
+          (msg.senderId === chatPartnerId && msg.receiverId === currentUserId)
+        ) {
+          shouldAppend = true;
+        }
+      } else if (msg.channel === activeTab) {
+        if (activeTab === 'team' || activeTab === 'broadcast') {
+          const group = isAdminOrHR ? (targetTeam || 'General') : (user?.department || 'General');
+          if (msg.targetGroup === group) shouldAppend = true;
+        } else {
+          shouldAppend = true; // company or hr
+        }
+      }
+      
+      if (shouldAppend) {
+        setMessages(prev => {
+          // Avoid duplicates
+          if (msg._id && prev.some(m => m._id === msg._id)) return prev;
+          return [...prev, msg];
+        });
+      }
+    };
+
+    socket.on('new-chat-message', handleNewMessage);
+    return () => {
+      socket.off('new-chat-message', handleNewMessage);
+    };
+  }, [socket, activeTab, targetTeam, targetUser, user, isAdminOrHR]);
 
   // Send real message
   const handleSendMessage = async (e) => {

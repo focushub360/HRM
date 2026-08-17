@@ -5,24 +5,25 @@ import { API_URL, SOCKET_URL } from '../config.js';
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  // Initialize state from sessionStorage if available (Session only)
+  // Initialize state from localStorage if available (Persists across restarts)
   const [user, setUser] = useState(() => {
     try {
-      const savedUser = sessionStorage.getItem('user');
+      const savedUser = localStorage.getItem('user');
       return savedUser ? JSON.parse(savedUser) : null;
     } catch (error) {
-      console.error("Error parsing user from session storage", error);
+      console.error("Error parsing user from local storage", error);
       return null;
     }
   });
 
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return !!sessionStorage.getItem('user');
+    return !!localStorage.getItem('user');
   });
 
   const [companies, setCompanies] = useState([]);
   const [activityLog, setActivityLog] = useState([]);
   const [inactivityAlerts, setInactivityAlerts] = useState([]);
+  const [chatUnreadCount, setChatUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState([]);
   const [leaveRequests, setLeaveRequests] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -166,8 +167,12 @@ export const AuthProvider = ({ children }) => {
     const newSocket = io(SOCKET_URL);
     setSocket(newSocket);
 
-    const roomId = user.type === 'hr' || user.type === 'company' ? user.companyId : (user.empId || user.id);
-    newSocket.emit('join-room', String(roomId));
+    // Join personal room
+    const personalRoomId = user.empId || user.id;
+    if (personalRoomId) newSocket.emit('join-room', String(personalRoomId));
+    
+    // Join company room for broadcasts and general chats
+    if (user.companyId) newSocket.emit('join-room', String(user.companyId));
 
     newSocket.on('new-notification', (notif) => {
       setNotifications(prev => [notif, ...prev]);
@@ -178,13 +183,22 @@ export const AuthProvider = ({ children }) => {
       }, 8000);
     });
 
+    // Listen for new chat messages globally to increment badge
+    newSocket.on('new-chat-message', (msg) => {
+      // Only increment if we aren't currently viewing the chat. 
+      // The Chat component will reset this to 0 when it mounts or receives focus.
+      if (window.location.pathname !== '/chat') {
+        setChatUnreadCount(prev => prev + 1);
+      }
+    });
+
     return () => {
       newSocket.disconnect();
     };
   }, [isAuthenticated, user?.id, user?.empId]);
 
   const login = (userData) => {
-    sessionStorage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
     setIsAuthenticated(true);
 
@@ -203,7 +217,7 @@ export const AuthProvider = ({ children }) => {
       logActivity({ action: 'LOGOUT', details: 'Web Logout' });
     }
 
-    sessionStorage.removeItem('user');
+    localStorage.removeItem('user');
     setUser(null);
     setIsAuthenticated(false);
     setActivityLog([]);
@@ -812,9 +826,9 @@ export const AuthProvider = ({ children }) => {
     try {
       const payload = {
         ...reportData,
-        userId: user?.empId || user?.id,
-        userName: user?.name,
-        companyId: user?.companyId,
+        userId: user?.empId || user?.id || 'unknown',
+        userName: user?.name || user?.employeeName || user?.email || 'Employee',
+        companyId: user?.companyId || user?.company_id || 'unknown',
       };
       const res = await fetch(`${API_URL}/daily-reports`, {
         method: 'POST',
@@ -824,8 +838,11 @@ export const AuthProvider = ({ children }) => {
       if (res.ok) {
         const data = await res.json();
         return data.report || data;
+      } else {
+        const errText = await res.text();
+        console.error("Backend returned error for daily report:", errText);
+        return null;
       }
-      return null;
     } catch (err) {
       console.error("Error submitting daily work report:", err);
       return null;
@@ -856,11 +873,14 @@ export const AuthProvider = ({ children }) => {
     user,
     isAuthenticated,
     hasPermission,
+    socket,
     companies,
     activityLog,
     inactivityAlerts,
     leaveRequests,
     notifications,
+    chatUnreadCount,
+    setChatUnreadCount,
     loading,
     login,
     logout,

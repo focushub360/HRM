@@ -257,10 +257,10 @@ const EmployeeDashboard = () => {
       new Date(log.timestamp).toDateString() === todayStr
     ) || [];
 
-    const hasCheckedInToday = todayActivity.some(log => log.action === 'CHECK_IN');
+    const todayCheckIns = todayActivity.filter(log => log.action === 'CHECK_IN').length;
     
-    if (hasCheckedInToday) {
-      alert("Limit Reached: You can only Check In once per day.");
+    if (todayCheckIns >= 2) {
+      alert("Limit Reached: You can only Check In 2 times per day.");
       return;
     }
 
@@ -288,15 +288,8 @@ const EmployeeDashboard = () => {
       alert("You have Checked In! Work timer started.");
     };
 
-    const defaultLocation = {
-      latitude: 12.9165,
-      longitude: 79.1325,
-      address: "Vellore, Tamil Nadu, India"
-    };
-
     if (!navigator.geolocation) {
-      // Fallback to default
-      processCheckIn(defaultLocation.latitude, defaultLocation.longitude, defaultLocation.address);
+      alert("Geolocation is not supported by your browser. Accurate location is required to Check In.");
       return;
     }
 
@@ -307,22 +300,14 @@ const EmployeeDashboard = () => {
         processCheckIn(latitude, longitude, address);
       },
       (err) => {
-        console.warn("Location access denied or failed. Using default location.", err);
-        // Fallback to default on error
-        processCheckIn(defaultLocation.latitude, defaultLocation.longitude, defaultLocation.address);
+        console.warn("Location access denied or failed.", err);
+        alert("Please allow location access to Check In. Accurate location is strictly required.");
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
 
   const handleCheckOut = (auto = false) => {
-    const defaultLocation = {
-      coords: {
-        latitude: 12.9165,
-        longitude: 79.1325
-      }
-    };
-
     const processLogoutWithPos = async (pos) => {
       const { latitude, longitude } = pos.coords;
       const address = await fetchAddress(latitude, longitude);
@@ -330,7 +315,7 @@ const EmployeeDashboard = () => {
     };
 
     if (!navigator.geolocation) {
-      processLogoutWithPos(defaultLocation);
+      alert("Geolocation is not supported by your browser. Accurate location is required to Check Out.");
       return;
     }
 
@@ -338,7 +323,12 @@ const EmployeeDashboard = () => {
       (pos) => processLogoutWithPos(pos),
       (err) => {
         console.error("Logout location unavailable:", err);
-        processLogoutWithPos(defaultLocation);
+        if (auto) {
+          // If auto check-out (e.g. system generated at midnight), bypass strict location check
+          processCheckOut(true, { latitude: 0, longitude: 0, address: "System Auto-Checkout" });
+        } else {
+          alert("Please allow location access to Check Out. Accurate location is strictly required.");
+        }
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
@@ -496,6 +486,11 @@ const EmployeeDashboard = () => {
       const hours = (totalMs / (1000 * 60 * 60)).toFixed(1);
       const isWeekend = d.getDay() === 0 || d.getDay() === 6;
 
+      let status = isToday && isCheckedIn ? 'Active' : (checkInLog ? 'Present' : (isWeekend ? 'Weekend' : 'Absent'));
+      if (checkInLog && (!isToday || !isCheckedIn) && parseFloat(hours) < 4.5) {
+        status = 'Half Day';
+      }
+
       if (checkInLog || isToday || !isWeekend) {
         records.push({
           date: d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
@@ -504,7 +499,7 @@ const EmployeeDashboard = () => {
           checkOut: checkOutLog ? formatTime(new Date(checkOutLog.timestamp)) : (isToday && isCheckedIn ? 'In Progress' : (checkInLog ? 'Active' : '--:--')),
           breaks: breaksCount,
           hours: `${hours} hrs`,
-          status: isToday && isCheckedIn ? 'Active' : (checkInLog ? 'Present' : (isWeekend ? 'Weekend' : 'Absent')),
+          status,
           location: checkInLog?.details?.replace('Checked In from ', '') || (isToday ? locationAddress : '--')
         });
       }
@@ -822,11 +817,11 @@ const EmployeeDashboard = () => {
                               <td>{rec.checkIn}</td>
                               <td>{rec.checkOut}</td>
                               <td>
-                                <span className="badge bg-warning bg-opacity-10 text-warning">{rec.breaks} / 2</span>
+                                <span className="badge bg-warning text-dark shadow-sm px-2 py-1">{rec.breaks || 0} / 2</span>
                               </td>
                               <td className="fw-bold text-primary">{rec.hours}</td>
                               <td>
-                                <span className={`badge ${rec.status === 'Active' ? 'bg-success' : rec.status === 'Present' ? 'bg-info text-white' : rec.status === 'Weekend' ? 'bg-secondary' : 'bg-danger'}`}>
+                                <span className={`badge ${rec.status === 'Active' ? 'bg-success' : rec.status === 'Present' ? 'bg-info text-white' : rec.status === 'Weekend' ? 'bg-secondary' : rec.status === 'Half Day' ? 'bg-warning text-dark' : 'bg-danger'}`}>
                                   {rec.status}
                                 </span>
                               </td>

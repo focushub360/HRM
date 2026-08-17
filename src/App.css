@@ -558,9 +558,6 @@ input:checked+.slider .bi-moon-fill {
 
 /* Persistent account chip in the sidebar */
 .user-info {
-  position: sticky;
-  top: 0.5rem;
-  z-index: 1;
   margin: 0.5rem 0.85rem 1rem;
   padding: 0.9rem 1rem;
   background: var(--bg-card);

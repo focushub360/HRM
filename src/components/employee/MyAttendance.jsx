@@ -117,7 +117,8 @@ const MyAttendance = () => {
         let tempCheckIn = null;
         let tempCheckInObj = null;
         const workedDays = new Set();
-        const historyMap = new Map(); // DateString -> { date, status, checkIn, checkOut, workHours, location }
+        const shifts = [];
+        const totalMsByDate = {}; // track total MS per day for Half Day logic
 
         userLogs.forEach(log => {
             const d = new Date(log.timestamp);
@@ -130,34 +131,35 @@ const MyAttendance = () => {
                     tempCheckInObj = log;
                     workedDays.add(dateStr);
 
-                    // Init history entry
-                    if (!historyMap.has(dateStr)) {
-                        historyMap.set(dateStr, {
-                            date: d.toLocaleDateString(),
-                            status: 'Present',
-                            checkIn: timeStr,
-                            checkOut: '--',
-                            workHours: '--',
-                            latitude: log.latitude,
-                            longitude: log.longitude
-                        });
-                    }
+                    // Create new shift entry
+                    shifts.push({
+                        dateStr: dateStr,
+                        date: d.toLocaleDateString(),
+                        status: 'Present',
+                        checkIn: timeStr,
+                        checkOut: '--',
+                        workHours: '--',
+                        latitude: log.latitude,
+                        longitude: log.longitude,
+                        shiftMs: 0,
+                        checkInTimeMs: tempCheckIn
+                    });
                 }
             } else if (log.action === 'CHECK_OUT' || log.action === 'AUTO_CHECK_OUT') {
                 if (tempCheckIn) {
                     const diff = d.getTime() - tempCheckIn;
                     totalMs += diff;
+                    totalMsByDate[dateStr] = (totalMsByDate[dateStr] || 0) + diff;
 
-                    // Update history entry
-                    if (historyMap.has(dateStr)) {
-                        const entry = historyMap.get(dateStr);
-                        entry.checkOut = timeStr;
-
-                        // Calculate hours for this session (accumulative if multiple sessions? Simplification: just last checkout determines session end for display, logic mimics dashboard)
-                        // Precise session math:
-                        const h = Math.floor(diff / 3600000);
-                        const m = Math.floor((diff % 3600000) / 60000);
-                        entry.workHours = `${h}h ${m}m`;
+                    // Find and update the shift entry
+                    const shift = shifts.find(s => s.checkInTimeMs === tempCheckIn);
+                    if (shift) {
+                        shift.checkOut = timeStr;
+                        shift.shiftMs = diff;
+                        
+                        const h = Math.floor(shift.shiftMs / 3600000);
+                        const m = Math.floor((shift.shiftMs % 3600000) / 60000);
+                        shift.workHours = `${h}h ${m}m`;
                     }
                     tempCheckIn = null;
                 }
@@ -169,9 +171,29 @@ const MyAttendance = () => {
             const currentSessionMs = currentTime.getTime() - checkInTime.getTime();
             if (currentSessionMs > 0) {
                 totalMs += currentSessionMs;
-                workedDays.add(checkInTime.toDateString());
+                const dateStr = checkInTime.toDateString();
+                workedDays.add(dateStr);
+                totalMsByDate[dateStr] = (totalMsByDate[dateStr] || 0) + currentSessionMs;
+                
+                const shift = shifts.find(s => s.checkInTimeMs === checkInTime.getTime());
+                if (shift) {
+                   shift.shiftMs = currentSessionMs;
+                   const h = Math.floor(shift.shiftMs / 3600000);
+                   const m = Math.floor((shift.shiftMs % 3600000) / 60000);
+                   shift.workHours = `Live: ${h}h ${m}m`;
+                }
             }
         }
+        
+        // 3. Compute final status per shift based on daily total
+        shifts.forEach(shift => {
+            const dayTotalMs = totalMsByDate[shift.dateStr] || 0;
+            if (dayTotalMs < 4.5 * 3600000) {
+                shift.status = 'Half Day';
+            } else {
+                shift.status = 'Present';
+            }
+        });
 
         // Stats
         const hours = (totalMs / (1000 * 60 * 60)).toFixed(2);
@@ -188,7 +210,7 @@ const MyAttendance = () => {
             pendingRequests: pendingCount
         });
 
-        setAttendanceHistory(Array.from(historyMap.values()).reverse()); // Newest first
+        setAttendanceHistory(shifts.reverse()); // Newest first
     };
 
     // 3. Reverse Geocoding
@@ -519,7 +541,11 @@ const MyAttendance = () => {
                                                 {attendanceHistory.length > 0 ? attendanceHistory.map((row, idx) => (
                                                     <tr key={idx}>
                                                         <td className="ps-4">{row.date}</td>
-                                                        <td><span className="badge bg-success bg-opacity-75" style={{ fontSize: '0.7em' }}>{row.status}</span></td>
+                                                        <td>
+                                                            <span className={`badge ${row.status === 'Present' || row.status === 'Active' ? 'bg-success' : row.status === 'Half Day' ? 'bg-warning text-dark' : 'bg-danger'} bg-opacity-75`} style={{ fontSize: '0.7em' }}>
+                                                                {row.status}
+                                                            </span>
+                                                        </td>
                                                         <td>{row.checkIn}</td>
                                                         <td>{row.checkOut}</td>
                                                         <td>{row.workHours}</td>

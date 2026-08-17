@@ -195,6 +195,7 @@ const WebcamMonitor = () => {
     }, 1000);
 
     let camera = null;
+    let lastFrameTime = 0;
     
     const startCamera = async () => {
       try {
@@ -207,7 +208,12 @@ const WebcamMonitor = () => {
           camera = new Camera(videoRef.current, {
             onFrame: async () => {
               if (videoRef.current) {
-                 await faceMesh.send({image: videoRef.current});
+                 const now = Date.now();
+                 // Throttle ML execution to 2 frames per second to prevent severe UI lag
+                 if (now - lastFrameTime >= 500) {
+                   lastFrameTime = now;
+                   await faceMesh.send({image: videoRef.current});
+                 }
               }
             },
             width: 320,

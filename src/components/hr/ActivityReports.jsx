@@ -401,7 +401,7 @@ const ActivityReports = () => {
             <h5 className="mb-0 fw-bold" style={{ color: 'var(--text-main)' }}>
               <i className="bi bi-people-fill text-primary me-2"></i>Employee-Wise Activity & Work Reports
             </h5>
-            <span className="badge bg-primary bg-opacity-10 text-primary">{employeeStats.length} Employees</span>
+            <span className="badge border border-primary text-primary" style={{ backgroundColor: 'rgba(13, 110, 253, 0.1)' }}>{employeeStats.length} Employees</span>
           </div>
           <div className="d-flex gap-2">
             <button className="btn btn-sm btn-outline-info" onClick={() => handleViewChange('work_reports')}>
@@ -441,10 +441,10 @@ const ActivityReports = () => {
                         <span className="badge bg-info text-dark">{emp.employeeType}</span>
                       </td>
                       <td>
-                        <span className="badge bg-success bg-opacity-15 text-success border border-success">{emp.checkInCount} Check-ins</span>
+                        <span className="badge border border-success text-success" style={{ backgroundColor: 'rgba(25, 135, 84, 0.1)' }}>{emp.checkInCount} Check-ins</span>
                       </td>
                       <td>
-                        <span className="badge bg-primary bg-opacity-15 text-primary border border-primary">
+                        <span className="badge border border-primary text-primary" style={{ backgroundColor: 'rgba(13, 110, 253, 0.1)' }}>
                           <i className="bi bi-journal-check me-1"></i>{emp.workReportCount} Reports
                         </span>
                       </td>
@@ -505,7 +505,7 @@ const ActivityReports = () => {
       <div className="card-header border-bottom py-3 d-flex justify-content-between align-items-center" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)' }}>
         <div className="d-flex align-items-center gap-2">
           <h5 className="mb-0 fw-bold text-info"><i className="bi bi-journal-check me-2"></i>Employee Day-Wise Work Reports</h5>
-          <span className="badge bg-info bg-opacity-10 text-info border border-info px-3">
+          <span className="badge border border-info text-info px-3" style={{ backgroundColor: 'rgba(13, 202, 240, 0.1)' }}>
             {filteredDailyWorkReports.length} Reports Logged
           </span>
         </div>
@@ -804,7 +804,7 @@ const ActivityReports = () => {
             >
               <i className={`bi bi-arrow-clockwise ${isRefreshing ? 'spin-animation' : ''}`}></i>
             </button>
-            <span className="badge bg-success bg-opacity-10 text-success border border-success small">
+            <span className="badge border border-success text-success small" style={{ backgroundColor: 'rgba(25, 135, 84, 0.1)' }}>
               <span className="spinner-grow spinner-grow-sm me-1" style={{ width: '6px', height: '6px' }} role="status"></span>
               Live Sync
             </span>

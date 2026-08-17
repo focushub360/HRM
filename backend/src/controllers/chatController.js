@@ -53,6 +53,17 @@ export const sendMessage = async (req, res) => {
       createdAt: new Date().toISOString()
     });
 
+    const io = req.app.get('io');
+    if (io) {
+      // Emit to company room (general/broadcast/team)
+      io.to(String(companyId)).emit('new-chat-message', message);
+      
+      // If it's a DM, also explicitly emit to receiver's private room
+      if (channel === 'dm' && receiverId) {
+        io.to(String(receiverId)).emit('new-chat-message', message);
+      }
+    }
+
     res.status(201).json(message);
   } catch (err) {
     console.error('Error sending chat message:', err);

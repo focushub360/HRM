@@ -26,13 +26,14 @@ import { MdSpaceDashboard } from "react-icons/md";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import logo from "../assets/Logo.png";
+import logoDark from "../assets/Logo_Dark.png";
 import userImg from "../assets/client.jpg";
 import "/src/App.css";
 
 const SideBar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout, hasPermission, leaveRequests, notifications } = useAuth();
+  const { user, logout, hasPermission, leaveRequests, notifications, chatUnreadCount } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
   // State for sidebar visibility
@@ -134,13 +135,17 @@ const SideBar = () => {
         </div>
 
         <div className="logo-container mt-3">
-          <img src={logo} alt="Logo" className="logo" />
+          <img src={theme === 'dark' ? logoDark : logo} alt="Logo" className="logo" />
         </div>
 
         <div className="user-info">
           {/* Dynamic Avatar */}
           {user?.profileImage ? (
             <img src={user.profileImage} alt="User" className="avatar" style={{ objectFit: 'cover' }} />
+          ) : user?.role === 'admin' ? (
+            <div className="avatar bg-white p-1 d-flex align-items-center justify-content-center shadow-sm" style={{ width: '50px', height: '50px', minWidth: '50px', borderRadius: '50%' }}>
+               <img src={logo} alt="Admin" className="img-fluid" style={{ maxHeight: '100%', objectFit: 'contain' }} />
+            </div>
           ) : (
             <div className="avatar d-flex align-items-center justify-content-center text-white fw-bold bg-primary"
               style={{
@@ -170,8 +175,28 @@ const SideBar = () => {
             if (item.name === "Leave Management" || item.name === "Leaves & Permissions") {
               badgeCount = leaveRequests?.filter(l => l.status === 'Pending').length || 0;
             } else if (item.name === "Chat") {
-              // Using general notifications as chat unread count for now, since chat unread is not natively tracked
-              badgeCount = notifications?.filter(n => !n.read).length || 0; 
+              return (
+                <li
+                  key={item.name}
+                  onClick={() => {
+                    navigate(item.path);
+                    // Optional: Close on click? setIsOpen(false); 
+                  }}
+                  className={`nav-item ${isActive ? "active" : ""}`}
+                  title={item.name}
+                  style={{ position: 'relative', display: 'flex', alignItems: 'center', fontFamily: '"Inter", sans-serif', padding: '12px 16px' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', flexGrow: 1, gap: '14px' }}>
+                    <span className="icon" style={{ display: 'flex', alignItems: 'center', fontSize: '1.2rem' }}>{item.icon}</span>
+                    <span style={{ fontSize: '14px', fontWeight: 500, letterSpacing: '0.3px' }}>{item.name}</span>
+                  </div>
+                  {chatUnreadCount > 0 && (
+                    <span className="badge bg-danger rounded-pill shadow-sm" style={{ fontSize: '0.75rem' }}>
+                      {chatUnreadCount > 9 ? '9+' : chatUnreadCount}
+                    </span>
+                  )}
+                </li>
+              );
             }
 
             return (

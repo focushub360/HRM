@@ -1,6 +1,7 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
+import companyLogo from "../../assets/Logo.png";
 
 const CompanyDashboard = () => {
   const navigate = useNavigate();
@@ -67,18 +68,13 @@ const CompanyDashboard = () => {
               data-bs-toggle="dropdown"
               aria-expanded="false"
             >
-              <div
-                className="rounded-circle d-flex align-items-center justify-content-center shadow-sm text-white"
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  backgroundColor: 'var(--primary)',
-                  overflow: 'hidden',
-                  fontSize: '1.2rem'
-                }}
-              >
+              <div className="rounded-circle overflow-hidden bg-primary d-flex align-items-center justify-content-center text-white fw-bold shadow-sm" style={{ width: '40px', height: '40px', fontSize: '1.2rem' }}>
                 {user?.profileImage ? (
                   <img src={user.profileImage} alt="Profile" className="w-100 h-100 object-fit-cover" />
+                ) : user?.role === 'admin' ? (
+                  <div className="w-100 h-100 bg-white p-1 d-flex align-items-center justify-content-center">
+                    <img src={companyLogo} alt="Admin" className="img-fluid" style={{ maxHeight: '100%', objectFit: 'contain' }} />
+                  </div>
                 ) : (
                   user?.name?.charAt(0).toUpperCase() || 'A'
                 )}
@@ -99,13 +95,18 @@ const CompanyDashboard = () => {
         </div>
       </div>
 
-      <div className="alert alert-success d-flex justify-content-between align-items-center" role="alert" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', color: 'var(--success)' }}>
+      {/* Welcome Header */}
+      <div className="d-flex justify-content-between align-items-center mb-4 p-3 rounded shadow-sm card-custom flex-shrink-0" style={{ backgroundColor: 'var(--bg-card)' }}>
         <div>
-          <h4 className="alert-heading mb-1">{getGreeting()}, {user?.name || "Admin"}!</h4>
-          <p className="mb-0">Logged in as: <strong>{user?.email}</strong></p>
+          <h3 className="mb-1 fw-bold text-primary">
+            {getGreeting()}, {user?.name || "Admin"}!
+          </h3>
+          <p className="text-muted mb-0" style={{ color: 'var(--text-muted)' }}>
+            Logged in as: <span className="fw-bold" style={{ color: 'var(--text-main)' }}>{user?.email}</span>
+          </p>
         </div>
         <div className="text-end">
-          <small>System Status: Online</small>
+          <small className="text-muted">System Status: <span className="text-success fw-bold">Online</span></small>
         </div>
       </div>
 

@@ -49,6 +49,10 @@ const DailyWorkCheckoutModal = ({ isOpen, onClose, onConfirmCheckout, sessionDur
   const [submitting, setSubmitting] = useState(false);
 
   const handleAddRow = () => {
+    if (rows.length >= 10) {
+      alert("You can add a maximum of 10 rows.");
+      return;
+    }
     const newId = Date.now();
     setRows(prev => [
       ...prev,
@@ -108,7 +112,11 @@ const DailyWorkCheckoutModal = ({ isOpen, onClose, onConfirmCheckout, sessionDur
         locationAddress: locationAddress || ''
       };
 
-      await submitDailyWorkReport(payload);
+      const result = await submitDailyWorkReport(payload);
+      
+      if (!result) {
+        throw new Error("Backend failed to process the report.");
+      }
 
       // Clear draft on successful submit
       localStorage.removeItem(`daily_work_draft_${user?.empId || user?.id}`);
@@ -146,16 +154,16 @@ const DailyWorkCheckoutModal = ({ isOpen, onClose, onConfirmCheckout, sessionDur
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          backgroundColor: '#111827', // Dark modern aesthetic matching user's screenshot
-          color: '#f3f4f6',
+          backgroundColor: 'var(--card-bg, #ffffff)', 
+          color: 'var(--text-main, #111827)',
           borderRadius: '16px',
           width: '100%',
           maxWidth: '740px',
           maxHeight: '92vh',
           display: 'flex',
           flexDirection: 'column',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+          border: '1px solid var(--glass-border, rgba(0,0,0,0.1))',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
           overflow: 'hidden'
         }}
       >
@@ -163,16 +171,16 @@ const DailyWorkCheckoutModal = ({ isOpen, onClose, onConfirmCheckout, sessionDur
         <div
           style={{
             padding: '20px 24px',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            borderBottom: '1px solid var(--glass-border, rgba(0,0,0,0.08))',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            background: '#111827'
+            background: 'var(--card-bg, #ffffff)'
           }}
         >
           <div className="d-flex align-items-center gap-2">
             <i className="bi bi-journal-text text-primary fs-5"></i>
-            <h5 className="mb-0 fw-bold text-white">Daily Updates</h5>
+            <h5 className="mb-0 fw-bold" style={{ color: 'var(--text-main, #111827)' }}>Daily Updates</h5>
           </div>
           <button
             type="button"
@@ -214,17 +222,17 @@ const DailyWorkCheckoutModal = ({ isOpen, onClose, onConfirmCheckout, sessionDur
 
           {/* Date & Shift Info */}
           <div className="d-flex justify-content-between align-items-center mb-3">
-            <span className="small text-muted text-uppercase fw-bold" style={{ letterSpacing: '0.05em' }}>
+            <span className="small fw-bold" style={{ letterSpacing: '0.05em', color: 'var(--text-muted, #6b7280)' }}>
               Date
             </span>
             <span
               style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                backgroundColor: 'var(--bg-sidebar-hover, rgba(0, 0, 0, 0.04))',
+                border: '1px solid var(--glass-border, rgba(0, 0, 0, 0.08))',
                 padding: '6px 14px',
                 borderRadius: '8px',
                 fontSize: '0.85rem',
-                color: '#e5e7eb',
+                color: 'var(--text-main, #111827)',
                 fontWeight: 600
               }}
             >
@@ -239,13 +247,13 @@ const DailyWorkCheckoutModal = ({ isOpen, onClose, onConfirmCheckout, sessionDur
               gridTemplateColumns: '170px 1fr 140px 36px',
               gap: '12px',
               padding: '8px 12px',
-              backgroundColor: 'rgba(255, 255, 255, 0.04)',
+              backgroundColor: 'var(--bg-sidebar-hover, rgba(0, 0, 0, 0.03))',
               borderRadius: '8px 8px 0 0',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
+              border: '1px solid var(--glass-border, rgba(0, 0, 0, 0.08))',
               fontSize: '0.75rem',
               fontWeight: 700,
               letterSpacing: '0.05em',
-              color: '#9ca3af',
+              color: 'var(--text-muted, #6b7280)',
               textTransform: 'uppercase'
             }}
           >
@@ -258,11 +266,11 @@ const DailyWorkCheckoutModal = ({ isOpen, onClose, onConfirmCheckout, sessionDur
           {/* Work Items Rows */}
           <div
             style={{
-              border: '1px solid rgba(255, 255, 255, 0.08)',
+              border: '1px solid var(--glass-border, rgba(0, 0, 0, 0.08))',
               borderTop: 'none',
               borderRadius: '0 0 8px 8px',
               padding: '12px',
-              backgroundColor: 'rgba(0, 0, 0, 0.15)',
+              backgroundColor: 'transparent',
               display: 'flex',
               flexDirection: 'column',
               gap: '12px'
@@ -286,9 +294,9 @@ const DailyWorkCheckoutModal = ({ isOpen, onClose, onConfirmCheckout, sessionDur
                   value={row.title}
                   onChange={(e) => handleRowChange(row.id, 'title', e.target.value)}
                   style={{
-                    backgroundColor: '#1f2937',
-                    borderColor: 'rgba(255, 255, 255, 0.12)',
-                    color: '#ffffff',
+                    backgroundColor: 'var(--bg-main, #ffffff)',
+                    borderColor: 'var(--glass-border, #d1d5db)',
+                    color: 'var(--text-main, #111827)',
                     borderRadius: '8px',
                     padding: '8px 10px',
                     fontSize: '0.85rem'
@@ -304,9 +312,9 @@ const DailyWorkCheckoutModal = ({ isOpen, onClose, onConfirmCheckout, sessionDur
                   value={row.update}
                   onChange={(e) => handleRowChange(row.id, 'update', e.target.value)}
                   style={{
-                    backgroundColor: '#1f2937',
-                    borderColor: 'rgba(255, 255, 255, 0.12)',
-                    color: '#ffffff',
+                    backgroundColor: 'var(--bg-main, #ffffff)',
+                    borderColor: 'var(--glass-border, #d1d5db)',
+                    color: 'var(--text-main, #111827)',
                     borderRadius: '8px',
                     padding: '8px 10px',
                     fontSize: '0.85rem',
@@ -321,19 +329,19 @@ const DailyWorkCheckoutModal = ({ isOpen, onClose, onConfirmCheckout, sessionDur
                   value={row.status}
                   onChange={(e) => handleRowChange(row.id, 'status', e.target.value)}
                   style={{
-                    backgroundColor: '#1f2937',
-                    borderColor: 'rgba(255, 255, 255, 0.12)',
-                    color: row.status === 'Completed' ? '#34d399' : row.status === 'In Progress' ? '#60a5fa' : row.status === 'Blocked' ? '#f87171' : '#c084fc',
+                    backgroundColor: 'var(--bg-main, #ffffff)',
+                    borderColor: 'var(--glass-border, #d1d5db)',
+                    color: row.status === 'Completed' ? '#10b981' : row.status === 'In Progress' ? '#3b82f6' : row.status === 'Blocked' ? '#ef4444' : '#8b5cf6',
                     fontWeight: 600,
                     borderRadius: '8px',
                     padding: '8px 10px',
                     fontSize: '0.82rem'
                   }}
                 >
-                  <option value="Completed" style={{ color: '#34d399', backgroundColor: '#1f2937' }}>Completed</option>
-                  <option value="In Progress" style={{ color: '#60a5fa', backgroundColor: '#1f2937' }}>In Progress</option>
-                  <option value="Blocked" style={{ color: '#f87171', backgroundColor: '#1f2937' }}>Blocked</option>
-                  <option value="Review" style={{ color: '#c084fc', backgroundColor: '#1f2937' }}>Review</option>
+                  <option value="Completed" style={{ color: '#10b981' }}>Completed</option>
+                  <option value="In Progress" style={{ color: '#3b82f6' }}>In Progress</option>
+                  <option value="Blocked" style={{ color: '#ef4444' }}>Blocked</option>
+                  <option value="Review" style={{ color: '#8b5cf6' }}>Review</option>
                 </select>
 
                 {/* Delete Button */}
@@ -386,11 +394,11 @@ const DailyWorkCheckoutModal = ({ isOpen, onClose, onConfirmCheckout, sessionDur
         <div
           style={{
             padding: '16px 24px',
-            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+            borderTop: '1px solid var(--glass-border, rgba(0, 0, 0, 0.08))',
             display: 'flex',
             justifyContent: 'flex-end',
             gap: '10px',
-            background: '#111827'
+            background: 'var(--card-bg, #ffffff)'
           }}
         >
           <button
@@ -415,9 +423,9 @@ const DailyWorkCheckoutModal = ({ isOpen, onClose, onConfirmCheckout, sessionDur
             onClick={handleSaveDraft}
             disabled={submitting}
             style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.08)',
-              color: '#e5e7eb',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
+              backgroundColor: 'var(--bg-sidebar-hover, rgba(0, 0, 0, 0.05))',
+              color: 'var(--text-main, #111827)',
+              border: '1px solid var(--glass-border, rgba(0, 0, 0, 0.1))',
               padding: '8px 18px',
               borderRadius: '8px',
               fontWeight: 600,

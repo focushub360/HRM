@@ -22,6 +22,7 @@ import FaceProctoring from "./components/employee/FaceProctoring";
 import LiveGPSTracker from "./components/employee/LiveGPSTracker";
 import Settings from "./components/Settings";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 // Lazy Load HR Components
 const Employees = React.lazy(() => import("./components/hr/Employees"));
@@ -65,7 +66,9 @@ function App() {
           <FaceProctoring />
           <LiveGPSTracker />
           <Sidebar />
-          <MainContentWrapper />
+          <ErrorBoundary>
+            <MainContentWrapper />
+          </ErrorBoundary>
         </div>
       </ThemeProvider>
     );

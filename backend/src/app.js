@@ -1,7 +1,10 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import routes from './routes/index.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
+import logger from './utils/logger.js';
 
 const app = express();
 
@@ -30,12 +33,25 @@ app.use(cors({
   },
   credentials: true,
 }));
+// ---------- Security & Rate Limiting ----------
+app.use(helmet());
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 1000, // limit each IP to 1000 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api', apiLimiter);
+
+// ---------- Parsing Middlewares ----------
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-// Request logger (same style as the old backend)
+// ---------- Request Logging ----------
 app.use((req, res, next) => {
-  console.log(`[${new Date().toLocaleTimeString()}] ${req.method} ${req.url}`);
+  logger.info(`${req.method} ${req.url}`);
   next();
 });
 

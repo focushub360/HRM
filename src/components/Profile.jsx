@@ -1,10 +1,11 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { storage } from '../firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { FaCamera, FaSave, FaTimes, FaEdit, FaUser, FaBuilding, FaMapMarkerAlt, FaEnvelope, FaPhone, FaIdCard, FaSignOutAlt, FaTrash, FaKey } from 'react-icons/fa';
 import ChangePasswordModal from './common/ChangePasswordModal';
 import SuccessModal from './common/SuccessModal';
+import companyLogo from '../assets/Logo.png';
 
 const RenderField = ({ label, name, value, type = "text", disabled = false, onChange, isEditing, max }) => (
     <div className="mb-3 col-md-6">
@@ -313,6 +314,10 @@ const Profile = () => {
                                 <div className="rounded-circle overflow-hidden border border-4 border-light shadow" style={{ width: '150px', height: '150px', backgroundColor: '#e9ecef' }}>
                                     {previewImage ? (
                                         <img src={previewImage} alt="Profile" className="w-100 h-100 object-fit-cover" />
+                                    ) : user?.role === 'admin' ? (
+                                        <div className="w-100 h-100 d-flex align-items-center justify-content-center p-3 bg-white">
+                                            <img src={companyLogo} alt="Company Logo" className="img-fluid" style={{ maxHeight: '100%', objectFit: 'contain' }} />
+                                        </div>
                                     ) : (
                                         <div className="w-100 h-100 d-flex align-items-center justify-content-center text-secondary display-1 fw-bold">
                                             {user.name?.charAt(0).toUpperCase()}

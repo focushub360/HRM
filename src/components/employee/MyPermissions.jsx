@@ -443,20 +443,27 @@ const MyPermissions = ({ isEmbedded = false }) => {
                                                     </div>
                                                 </td>
                                                 <td className="pe-4 text-end">
-                                                    <span
-                                                        className="badge px-3 py-2 fw-semibold"
-                                                        style={{
-                                                            backgroundColor: p.status === 'Approved' ? 'rgba(16, 185, 129, 0.15)' : p.status === 'Rejected' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                                                            color: p.status === 'Approved' ? '#10b981' : p.status === 'Rejected' ? '#ef4444' : '#f59e0b',
-                                                            border: `1px solid ${p.status === 'Approved' ? '#10b981' : p.status === 'Rejected' ? '#ef4444' : '#f59e0b'}`,
-                                                            borderRadius: '8px',
-                                                            fontSize: '0.8rem'
-                                                        }}
-                                                    >
-                                                        {p.status === 'Approved' && '✅ Approved'}
-                                                        {p.status === 'Rejected' && '❌ Rejected'}
-                                                        {p.status === 'Pending' && '⏳ In Review'}
-                                                    </span>
+                                                    <div className="d-flex flex-column align-items-end">
+                                                        <span
+                                                            className="badge px-3 py-2 fw-semibold mb-1"
+                                                            style={{
+                                                                backgroundColor: p.status === 'Approved' ? 'rgba(16, 185, 129, 0.15)' : p.status === 'Rejected' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                                                                color: p.status === 'Approved' ? '#10b981' : p.status === 'Rejected' ? '#ef4444' : '#f59e0b',
+                                                                border: `1px solid ${p.status === 'Approved' ? '#10b981' : p.status === 'Rejected' ? '#ef4444' : '#f59e0b'}`,
+                                                                borderRadius: '8px',
+                                                                fontSize: '0.8rem'
+                                                            }}
+                                                        >
+                                                            {p.status === 'Approved' && '✅ Approved'}
+                                                            {p.status === 'Rejected' && '❌ Rejected'}
+                                                            {p.status === 'Pending' && '⏳ In Review'}
+                                                        </span>
+                                                        {p.approverName && p.status !== 'Pending' && (
+                                                            <small className="text-muted" style={{ fontSize: '0.7rem', fontStyle: 'italic' }}>
+                                                                by {p.approverName}
+                                                            </small>
+                                                        )}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         );
