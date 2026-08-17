@@ -164,7 +164,7 @@ const Txt = (props) => (
 );
 
 // ─── Project Card ─────────────────────────────────────────────────────────────
-const ProjectCard = ({ project, tasks = [], employees, onAddTask, onUpdateTaskStatus, onUpdateProjectStatus, user, canCreateProject }) => {
+const ProjectCard = ({ project, tasks = [], employees, onAddTask, onUpdateTaskStatus, onUpdateProjectStatus, onDeleteProject, user, canCreateProject }) => {
     const [expanded, setExpanded] = useState(false);
     const pct = tasks.length === 0 ? 0 : Math.round(tasks.filter(t => t.status === 'Completed').length / tasks.length * 100);
     const teamColors = ['#4f46e5', '#7c3aed', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'];
@@ -222,6 +222,19 @@ const ProjectCard = ({ project, tasks = [], employees, onAddTask, onUpdateTaskSt
                             }}>
                                 ✓ Assigned {memberObj?.role ? `(${memberObj.role})` : ''}
                             </span>
+                        )}
+                        
+                        {canCreateProject && (
+                            <button
+                                onClick={() => onDeleteProject && window.confirm('Are you sure you want to delete this project?') && onDeleteProject(project.id)}
+                                style={{
+                                    background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                }}
+                                title="Delete Project"
+                            >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            </button>
                         )}
                     </div>
                     <ProgressRing pct={pct} size={48} stroke={4} />
@@ -582,6 +595,28 @@ const ProjectManagement = () => {
         }
     };
 
+    // Delete Project
+    const handleDeleteProject = async (projectId) => {
+        try {
+            const res = await fetch(`${API}/projects/${projectId}`, {
+                method: 'DELETE',
+            });
+            if (res.ok) {
+                setProjects(prev => prev.filter(p => String(p.id || p._id) !== String(projectId)));
+                setTaskMap(prev => {
+                    const next = { ...prev };
+                    delete next[projectId];
+                    return next;
+                });
+            } else {
+                alert("Failed to delete project. Please check if the server is running.");
+            }
+        } catch (err) {
+            console.error('Error deleting project:', err);
+            alert("Error deleting project. Check console.");
+        }
+    };
+
     const openTaskModal = (project) => {
         setTargetProject(project);
         setTaskModal(true);
@@ -726,6 +761,7 @@ const ProjectManagement = () => {
                                     onAddTask={openTaskModal}
                                     onUpdateTaskStatus={handleUpdateTaskStatus}
                                     onUpdateProjectStatus={handleUpdateProjectStatus}
+                                    onDeleteProject={handleDeleteProject}
                                     user={user}
                                     canCreateProject={canCreateProject}
                                 />
