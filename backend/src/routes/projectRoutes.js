@@ -8,4 +8,4 @@ router.get('/:companyId', getProjects);
 router.put('/:id', updateProject);
 router.delete('/:id', deleteProject);
 
-export default router;
+export default router;

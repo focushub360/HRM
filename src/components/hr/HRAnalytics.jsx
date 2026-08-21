@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
+import { useTheme } from "../../context/ThemeContext.jsx";
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -60,6 +61,9 @@ const percentageLabelsPlugin = {
 
 const HRAnalytics = () => {
     const { user, companies, activityLog, leaveRequests, refreshDashboardData } = useAuth();
+    const { theme } = useTheme();
+    const chartTextColor = theme === 'dark' ? '#f1f5f9' : '#1f2937';
+    const chartGridColor = theme === 'dark' ? 'rgba(226, 232, 240, 0.1)' : 'rgba(15, 23, 42, 0.08)';
     const [selectedCompanyId, setSelectedCompanyId] = React.useState(user?.companyId);
 
     // Auto-refresh for "Live" experience
@@ -324,6 +328,12 @@ const HRAnalytics = () => {
                                         options={{
                                             maintainAspectRatio: false,
                                             plugins: {
+                                                legend: {
+                                                    labels: {
+                                                        color: chartTextColor,
+                                                        font: { size: 12, weight: '600' }
+                                                    }
+                                                },
                                                 tooltip: {
                                                     callbacks: {
                                                         label: (context) => {
@@ -355,6 +365,12 @@ const HRAnalytics = () => {
                                         options={{
                                             maintainAspectRatio: false,
                                             plugins: {
+                                                legend: {
+                                                    labels: {
+                                                        color: chartTextColor,
+                                                        font: { size: 12, weight: '600' }
+                                                    }
+                                                },
                                                 tooltip: {
                                                     callbacks: {
                                                         label: (context) => {
@@ -388,8 +404,24 @@ const HRAnalytics = () => {
                                         data={activityTrendData}
                                         options={{
                                             maintainAspectRatio: false,
+                                            plugins: {
+                                                legend: {
+                                                    labels: {
+                                                        color: chartTextColor,
+                                                        font: { size: 12, weight: '600' }
+                                                    }
+                                                }
+                                            },
                                             scales: {
-                                                y: { beginAtZero: true }
+                                                y: {
+                                                    beginAtZero: true,
+                                                    ticks: { color: chartTextColor },
+                                                    grid: { color: chartGridColor }
+                                                },
+                                                x: {
+                                                    ticks: { color: chartTextColor },
+                                                    grid: { color: chartGridColor }
+                                                }
                                             }
                                         }}
                                     />

@@ -16,22 +16,37 @@ const HRLeaveManagement = () => {
         return <Navigate to="/" replace />;
     }
 
+    // Latest submitted request first: sort by true submission time.
+    // Priority: requestDate (stamped by backend on create) > createdAt (if present)
+    // > timestamp embedded in the Mongo ObjectId > leave date (last-resort fallback).
+    const getSortKey = (r) => {
+        const ts = r.requestDate || r.createdAt || r.submittedAt || r.createdOn;
+        if (ts) return new Date(ts).getTime();
+        if (typeof r.id === 'string' && /^[0-9a-fA-F]{24}$/.test(r.id)) {
+            // First 8 hex chars of a Mongo ObjectId are a 4-byte creation timestamp (seconds)
+            return parseInt(r.id.substring(0, 8), 16) * 1000;
+        }
+        return new Date(r.date || r.startDate).getTime();
+    };
+
     const filteredRequests = useMemo(() => {
         let reqs = leaveRequests || [];
-        return reqs.filter(req => {
-            const companyMatch = !selectedCompany || req.companyId === parseInt(selectedCompany) || req.companyId === selectedCompany;
-            const statusMatch = filterStatus === 'All' || req.status === filterStatus;
+        return reqs
+            .filter(req => {
+                const companyMatch = !selectedCompany || req.companyId === parseInt(selectedCompany) || req.companyId === selectedCompany;
+                const statusMatch = filterStatus === 'All' || req.status === filterStatus;
 
-            let dateMatch = true;
-            if (startDate) {
-                dateMatch = dateMatch && new Date(req.date) >= new Date(startDate);
-            }
-            if (endDate) {
-                dateMatch = dateMatch && new Date(req.date) <= new Date(endDate);
-            }
+                let dateMatch = true;
+                if (startDate) {
+                    dateMatch = dateMatch && new Date(req.date) >= new Date(startDate);
+                }
+                if (endDate) {
+                    dateMatch = dateMatch && new Date(req.date) <= new Date(endDate);
+                }
 
-            return companyMatch && statusMatch && dateMatch;
-        });
+                return companyMatch && statusMatch && dateMatch;
+            })
+            .sort((a, b) => getSortKey(b) - getSortKey(a));
     }, [leaveRequests, selectedCompany, filterStatus, startDate, endDate]);
 
     const employeesOnLeaveToday = useMemo(() => {

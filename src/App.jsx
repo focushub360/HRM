@@ -4,8 +4,8 @@ import Sidebar from "./components/SideBar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./components/Login";
 import { useAuth } from "./context/AuthContext.jsx";
-import "/src/App.css";
 import "bootstrap/dist/css/bootstrap.min.css";
+import "/src/App.css";
 import loginLogo from "./assets/Logo.png";
 
 import CompanySpecificDashboard from "./components/hr/CompanySpecificDashboard.jsx";

@@ -1,29 +1,77 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { FaClock, FaCalendarAlt, FaVideo, FaGlobe, FaUserCircle } from "react-icons/fa";
+import { FaClock, FaCalendarAlt, FaVideo, FaGlobe, FaUserCircle, FaExclamationTriangle, FaArrowLeft } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
-import eventImg from "../assets/EventO.png";
 import "../App.css";
+
+const toMinutes = (hhmm) => {
+  if (!hhmm) return 0;
+  const [h, m] = hhmm.split(':').map(Number);
+  return h * 60 + m;
+};
+
+const parseDurationMinutes = (durationStr) => {
+  if (!durationStr) return 30;
+  const match = String(durationStr).match(/(\d+)/);
+  return match ? parseInt(match[1], 10) : 30;
+};
+
+// NOTE: adjust this to match your actual event-dashboard route
+const DASHBOARD_ROUTE = "/events";
 
 const Events2 = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { submitEvent, user } = useAuth(); // Get user
+  const { submitEvent, user, events } = useAuth();
 
   // Received from Event1 via navigate state
-  const { date, time, timezone } = location.state || {};
+  const { date, startTime, endTime, duration, timezone } = location.state || {};
 
   // States for form inputs - Prefill from User
   const [name, setName] = useState(user?.name || "");
   const [email, setEmail] = useState(user?.email || "");
   const [eventTitle, setEventTitle] = useState("");
   const [conferenceDetails, setConferenceDetails] = useState("");
-  const [duration, setDuration] = useState("30 min");
   const [visibility, setVisibility] = useState("company");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState("");
+
+  // Guard: block submission if this exact date/time range overlaps an existing event
+  const isSlotTaken = useMemo(() => {
+    if (!events || !date || !startTime || !endTime) return false;
+    const newStart = toMinutes(startTime);
+    const newEnd = toMinutes(endTime);
+    return events
+      .filter((e) => e.date === date)
+      .some((e) => {
+        const s = toMinutes(e.time || e.startTime);
+        const d = parseDurationMinutes(e.duration);
+        const eEnd = s + d;
+        return newStart < eEnd && s < newEnd;
+      });
+  }, [events, date, startTime, endTime]);
+
+  const validate = () => {
+    if (!eventTitle.trim()) return "Event title is required.";
+    if (!name.trim()) return "Your name is required.";
+    if (!email.trim()) return "Email is required.";
+    if (!/^\S+@\S+\.\S+$/.test(email)) return "Enter a valid email address.";
+    if (!conferenceDetails.trim()) return "Meeting link is required.";
+    if (!/^https?:\/\/\S+/.test(conferenceDetails.trim())) return "Meeting link must be a valid URL starting with http(s)://";
+    if (!date || !startTime || !endTime) return "Please go back and select a date, start time, and end time.";
+    if (isSlotTaken) return "This time range has already been booked. Please choose another time.";
+    return "";
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const error = validate();
+    if (error) {
+      setFormError(error);
+      return;
+    }
+    setFormError("");
     setIsSubmitting(true);
 
     const eventData = {
@@ -33,7 +81,9 @@ const Events2 = () => {
       conferenceDetails, // Link
       duration,
       date: date || new Date().toDateString(),
-      time: time || "10:00 AM", // Fallback if direct access
+      time: startTime || "10:00", // kept as "time" for backward compatibility
+      startTime: startTime || "10:00",
+      endTime: endTime || "",
       timezone: timezone || "Asia/Kolkata",
       visibility, // 'company', 'hr', 'office', 'sales'
       organizerId: user?.empId,
@@ -46,11 +96,6 @@ const Events2 = () => {
     setIsSubmitting(false);
 
     if (result) {
-      if (visibility === 'sales') {
-        // If targeted at Sales, maybe navigate or alert?
-        // Standard flow is confirmation page.
-      }
-
       navigate("/event/confirmation", {
         state: {
           ...eventData,
@@ -58,14 +103,27 @@ const Events2 = () => {
         },
       });
     } else {
-      alert("Failed to schedule event. Please try again.");
+      setFormError("Failed to schedule event. Please try again.");
     }
+  };
+
+  const handleCancel = () => {
+    navigate(DASHBOARD_ROUTE);
   };
 
   return (
     <div className="container my-4">
+      {/* Back to dashboard */}
+      <button
+        type="button"
+        className="btn btn-link p-0 mb-3 d-inline-flex align-items-center gap-2 text-decoration-none"
+        onClick={() => navigate(DASHBOARD_ROUTE)}
+      >
+        <FaArrowLeft /> Back to Event Dashboard
+      </button>
+
       <div className="row g-4">
-        {/* Event Details */}
+        {/* Event Details Preview */}
         <div className="col-md-6">
           <div className="card shadow-sm p-4">
             <div className="d-flex align-items-center gap-3 mb-4">
@@ -95,14 +153,14 @@ const Events2 = () => {
             <div className="d-flex align-items-center gap-2 mb-2">
               <FaClock />
               <span className="text-muted fst-italic small">
-                {time ? `${time} - ${date}` : "Date & Time will be set"}
+                {startTime && endTime ? `${startTime} - ${endTime}, ${date}` : "Date & Time will be set"}
               </span>
             </div>
 
             <div className="d-flex align-items-center gap-2 mb-2">
               <FaCalendarAlt />
               <span className="text-muted fst-italic small">
-                {duration}
+                {duration || "Duration not set"}
               </span>
             </div>
 
@@ -120,6 +178,13 @@ const Events2 = () => {
                 {timezone || "Asia/Kolkata"}
               </span>
             </div>
+
+            {isSlotTaken && (
+              <div className="validation-error mt-3">
+                <FaExclamationTriangle className="me-2" />
+                <span>This time range has already been booked. Go back and pick a different time.</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -129,9 +194,9 @@ const Events2 = () => {
             <h2 className="fw-bold fs-5 text-primary mb-3">
               Schedule Event
             </h2>
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} noValidate>
               <div className="mb-3">
-                <label className="form-label">Event Title</label>
+                <label className="form-label">Event Title <span className="text-danger">*</span></label>
                 <input
                   type="text"
                   className="form-control"
@@ -143,7 +208,7 @@ const Events2 = () => {
               </div>
 
               <div className="mb-3">
-                <label className="form-label">Name</label>
+                <label className="form-label">Name <span className="text-danger">*</span></label>
                 <input
                   type="text"
                   className="form-control"
@@ -155,7 +220,7 @@ const Events2 = () => {
               </div>
 
               <div className="mb-3">
-                <label className="form-label">Email</label>
+                <label className="form-label">Email <span className="text-danger">*</span></label>
                 <input
                   type="email"
                   className="form-control"
@@ -167,11 +232,12 @@ const Events2 = () => {
               </div>
 
               <div className="mb-3">
-                <label className="form-label">Target Module / Team</label>
+                <label className="form-label">Target Module / Team <span className="text-danger">*</span></label>
                 <select
                   className="form-select"
                   value={visibility}
                   onChange={(e) => setVisibility(e.target.value)}
+                  required
                 >
                   <option value="company">Entire Company (General Events)</option>
                   <option value="hr">HR Department (HR Dashboard)</option>
@@ -186,55 +252,50 @@ const Events2 = () => {
                 <input
                   type="text"
                   className="form-control"
-                  placeholder="e.g. 30 min"
-                  value={duration}
-                  onChange={(e) => setDuration(e.target.value)}
+                  value={duration || ""}
+                  disabled
+                  readOnly
                 />
+                <div className="form-text">Calculated automatically from the start/end time you picked.</div>
               </div>
 
               <div className="mb-3">
-                <div className="d-flex justify-content-between align-items-center mb-1">
-                  <label className="form-label mb-0">Meeting Link</label>
-                  <div className="d-flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        window.open('https://meet.google.com/new', '_blank');
-                        setConferenceDetails('https://meet.google.com/');
-                      }}
-                      className="btn btn-sm d-flex align-items-center gap-1 border-0 p-0 px-2"
-                      style={{ background: 'rgba(52, 168, 83, 0.1)', color: '#34A853', fontSize: '0.75rem', fontWeight: 'bold' }}
-                      title="Create Google Meet"
-                    >
-                      <i className="bi bi-google"></i> Meet
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        window.open('https://teams.microsoft.com/l/meeting/new', '_blank');
-                        setConferenceDetails('https://teams.microsoft.com/');
-                      }}
-                      className="btn btn-sm d-flex align-items-center gap-1 border-0 p-0 px-2"
-                      style={{ background: 'rgba(70, 78, 184, 0.1)', color: '#464EB8', fontSize: '0.75rem', fontWeight: 'bold' }}
-                      title="Create MS Teams"
-                    >
-                      <i className="bi bi-microsoft"></i> Teams
-                    </button>
-                  </div>
-                </div>
+                <label className="form-label">Meeting Link <span className="text-danger">*</span></label>
                 <input
                   type="url"
                   className="form-control"
-                  placeholder="https://meet.google.com/..."
+                  placeholder="https://meet.google.com/xxx-xxxx-xxx"
                   value={conferenceDetails}
                   onChange={(e) => setConferenceDetails(e.target.value)}
                   required
                 />
+                <div className="form-text">Paste your Google Meet, Teams, or Zoom link here.</div>
               </div>
 
-              <button type="submit" className="btn btn-primary w-100" disabled={isSubmitting}>
-                {isSubmitting ? 'Scheduling...' : 'Confirm Schedule'}
-              </button>
+              {formError && (
+                <div className="validation-error mb-3">
+                  <FaExclamationTriangle className="me-2" />
+                  <span>{formError}</span>
+                </div>
+              )}
+
+              <div className="d-flex gap-2">
+              <button
+  type="button"
+  className="btn btn-danger flex-fill"
+  onClick={handleCancel}
+  disabled={isSubmitting}
+>
+  Cancel
+</button>
+                <button
+                  type="submit"
+                  className="btn btn-primary flex-fill"
+                  disabled={isSubmitting || isSlotTaken}
+                >
+                  {isSubmitting ? 'Scheduling...' : 'Confirm Schedule'}
+                </button>
+              </div>
 
               <p className="mt-3 small text-muted text-center">
                 By clicking Confirm, you agree to the company event policies.

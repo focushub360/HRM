@@ -2,7 +2,7 @@
 
 .company-management-container {
   padding: 2rem;
-  background-color: #f8f9fa;
+  background-color: var(--bg-main);
   min-height: 100vh;
 }
 
@@ -14,20 +14,20 @@
 .management-header h1 {
   font-size: 2.5rem;
   font-weight: 700;
-  color: #000000;
+  color: var(--text-main);
   margin-bottom: 0.5rem;
 }
 
 .management-header p {
   font-size: 1.1rem;
-  color: #4b5563;
+  color: var(--text-muted);
   margin-bottom: 1.5rem;
 }
 
 /* Cards - Clean White Design */
 .card {
-  background-color: #ffffff;
-  border: 1px solid #e5e7eb;
+  background-color: var(--surface);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   transition: all 0.3s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -49,12 +49,12 @@
 
 .card-body {
   padding: 1.5rem;
-  color: #000000;
+  color: var(--text-main);
 }
 
 /* Stat Cards - White with Colored Numbers */
 .card .card-body h6 {
-  color: #6b7280;
+  color: var(--text-muted);
   font-size: 0.875rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -71,14 +71,14 @@
 /* Table Styles */
 .table {
   margin-bottom: 0;
-  color: #000000;
+  color: var(--text-main);
 }
 
 .table thead th {
-  background-color: #f3f4f6;
-  border-bottom: 2px solid #e5e7eb;
+  background-color: var(--surface-soft);
+  border-bottom: 2px solid var(--border-color);
   font-weight: 600;
-  color: #000000;
+  color: var(--text-main);
   padding: 1rem;
   font-size: 0.875rem;
   text-transform: uppercase;
@@ -86,23 +86,23 @@
 }
 
 .table tbody tr {
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border-color);
   transition: background-color 0.2s ease;
 }
 
 .table tbody tr:hover {
-  background-color: #f9fafb;
+  background-color: var(--surface-soft);
 }
 
 .table tbody td {
   padding: 1rem;
   vertical-align: middle;
-  color: #000000;
+  color: var(--text-main);
 }
 
 .table tbody td.fw-bold {
   font-weight: 600;
-  color: #000000;
+  color: var(--text-main);
 }
 
 /* Modal Styles */
@@ -131,7 +131,7 @@
 }
 
 .modal-content {
-  background: #ffffff;
+  background: var(--surface);
   border-radius: 12px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
   max-width: 500px;
@@ -155,7 +155,7 @@
 
 .modal-header {
   padding: 1.5rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -164,7 +164,7 @@
 .modal-header h5 {
   margin: 0;
   font-weight: 600;
-  color: #000000;
+  color: var(--text-main);
 }
 
 .btn-close {
@@ -172,14 +172,14 @@
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
-  color: #6b7280;
+  color: var(--text-muted);
   padding: 0;
   width: auto;
   opacity: 1;
 }
 
 .btn-close:hover {
-  color: #000000;
+  color: var(--text-main);
 }
 
 .modal-body {
@@ -188,7 +188,7 @@
 
 .modal-footer {
   padding: 1rem 1.5rem;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--border-color);
   display: flex;
   gap: 1rem;
   justify-content: flex-end;
@@ -202,13 +202,13 @@
 
 /* Form Styles */
 .form-control {
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 0.75rem 1rem;
   font-size: 0.95rem;
   transition: all 0.3s ease;
-  background-color: #ffffff;
-  color: #000000;
+  background-color: var(--surface);
+  color: var(--text-main);
 }
 
 .form-control:focus {
@@ -219,7 +219,7 @@
 
 .form-label {
   font-weight: 600;
-  color: #000000;
+  color: var(--text-main);
   margin-bottom: 0.5rem;
   display: block;
   font-size: 0.875rem;
@@ -278,12 +278,12 @@
 }
 
 .btn-secondary {
-  background-color: #e5e7eb;
-  color: #000000;
+  background-color: var(--surface-soft);
+  color: var(--text-main);
 }
 
 .btn-secondary:hover {
-  background-color: #d1d5db;
+  background-color: var(--border-color);
 }
 
 .btn-sm {
@@ -306,7 +306,7 @@
 
 .bg-warning {
   background-color: #f59e0b !important;
-  color: #000000;
+  color: var(--text-main);
 }
 
 .bg-danger {
@@ -354,13 +354,13 @@
 
 /* Code Block */
 code {
-  background-color: #f3f4f6;
+  background-color: var(--surface-soft);
   padding: 0.4rem 0.8rem;
   border-radius: 6px;
   font-family: 'Courier New', monospace;
   font-size: 0.9rem;
   color: #dc2626;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-color);
 }
 
 /* Text Colors */
@@ -381,13 +381,13 @@ code {
 }
 
 .text-muted {
-  color: #6b7280 !important;
+  color: var(--text-muted) !important;
 }
 
 .lead {
   font-size: 1.1rem;
   font-weight: 500;
-  color: #000000;
+  color: var(--text-main);
   margin-bottom: 0;
 }
 

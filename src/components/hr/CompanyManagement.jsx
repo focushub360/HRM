@@ -34,7 +34,6 @@ const CompanyManagement = () => {
 
   // Aggregated Data
   const allEmployees = React.useMemo(() => {
-    // Strictly Employees ONLY (No HRs) - Enforce EMP prefix to avoid mixed data
     return companies.flatMap(c =>
       (c.employeeAccounts || [])
         .filter(e => e.empId && e.empId.startsWith('EMP'))
@@ -43,7 +42,6 @@ const CompanyManagement = () => {
   }, [companies]);
 
   const allHRs = React.useMemo(() => {
-    // Strictly HRs (Must start with 'HR-')
     return companies.flatMap(c =>
       (c.hrAccounts || [])
         .filter(h => h.empId && String(h.empId).trim().toUpperCase().startsWith('HR-'))
@@ -55,9 +53,6 @@ const CompanyManagement = () => {
     const company = companies.find(c => c.id === companyId);
     if (!company) return;
 
-    // Use updateCompany from context
-    // We send specific fields to avoid overwriting arrays with empty/partial data if backend is strict
-    // But assuming strict PUT, we should send main fields.
     const hasUpdated = await updateCompany(companyId, {
       name: company.name,
       code: company.code,
@@ -68,14 +63,11 @@ const CompanyManagement = () => {
       status: newStatus
     });
 
-    if (hasUpdated) {
-      // success toast or nothing (state updates automatically via context)
-    } else {
+    if (!hasUpdated) {
       alert("Failed to update status");
     }
   };
 
-  // Compute filtered companies list (only for Company Views)
   const filteredCompanies = companies.filter(c => {
     if (filterType === 'ACTIVE') return c.status === 'Active';
     return true;
@@ -93,7 +85,6 @@ const CompanyManagement = () => {
     }
 
     (async () => {
-      // Ensure code is set before submitting just in case
       const codeToSubmit = newCompany.code || `FT${String(companies.length + 1).padStart(3, '0')}`;
       const payload = { ...newCompany, code: codeToSubmit };
       
@@ -115,10 +106,7 @@ const CompanyManagement = () => {
     })();
   };
 
-  // ... (keeping other handlers same until render)
-
   const renderTableContent = () => {
-    // CASE 1: ALL EMPLOYEES
     if (filterType === 'WITH_EMPLOYEES') {
       return (
         <div className="table-responsive">
@@ -160,7 +148,6 @@ const CompanyManagement = () => {
       );
     }
 
-    // CASE 2: ALL HR ACCOUNTS
     if (filterType === 'WITH_HRS') {
       const strictHRs = allHRs.filter(h => h.empId && String(h.empId).startsWith('HR-'));
       return (
@@ -203,7 +190,6 @@ const CompanyManagement = () => {
       );
     }
 
-    // CASE 3: COMPANIES (Default & Active)
     return (
       <div className="table-responsive">
         <table className="table table-hover mb-0">
@@ -271,7 +257,6 @@ const CompanyManagement = () => {
     );
   };
 
-
   const handleAddHR = async (e) => {
     e.preventDefault();
     if (!newHR.name || !newHR.email || !newHR.companyId) {
@@ -335,6 +320,7 @@ const CompanyManagement = () => {
     alert("Password copied to clipboard!");
   };
 
+  // DETAIL VIEW (Early Return)
   if (selectedCompany) {
     const company = companies.find((c) => c.id === selectedCompany);
 
@@ -509,7 +495,7 @@ const CompanyManagement = () => {
                   ))}
                 </tbody>
               </table>
-              {company.hrAccounts.length === 0 && (
+              {(!company.hrAccounts || company.hrAccounts.length === 0) && (
                 <div className="p-4 text-center text-muted">
                   No HR accounts created yet. Click "Add HR Account" to create one.
                 </div>
@@ -622,10 +608,74 @@ const CompanyManagement = () => {
             </div>
           </div>
         )}
+
+        {/* ✅ FIX: Edit Company Modal MOVED INSIDE the selectedCompany block so it actually renders */}
+        {showEditCompany && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5>Edit Company</h5>
+                <button
+                  onClick={() => setShowEditCompany(false)}
+                  className="btn-close"
+                ></button>
+              </div>
+              <form onSubmit={handleUpdateCompany}>
+                <div className="modal-body">
+                  <div className="mb-3">
+                    <label className="form-label">Company Name *</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={editCompanyData.name}
+                      onChange={(e) =>
+                        setEditCompanyData({ ...editCompanyData, name: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Company Code *</label>
+                    <input
+                      type="text"
+                      className="form-control bg-light fw-bold text-primary"
+                      value={editCompanyData.code}
+                      readOnly
+                      title="Company code is fixed"
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Location *</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={editCompanyData.location}
+                      onChange={(e) =>
+                        setEditCompanyData({ ...editCompanyData, location: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditCompany(false)}
+                    className="btn btn-secondary"
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn btn-primary">
+                    Update Company
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
 
+  // MAIN LIST VIEW
   return (
     <div className="company-management-container">
       <div className="management-header mb-4">
@@ -666,7 +716,7 @@ const CompanyManagement = () => {
             <div className="card-body">
               <h6 className="text-muted">Total Employees</h6>
               <h2 className="text-success">
-                {companies.reduce((sum, c) => sum + c.employees, 0)}
+                {companies.reduce((sum, c) => sum + (c.employees || 0), 0)}
               </h2>
             </div>
           </div>
@@ -817,67 +867,6 @@ const CompanyManagement = () => {
                 </button>
                 <button type="submit" className="btn btn-primary">
                   Create Company
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-      {showEditCompany && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h5>Edit Company</h5>
-              <button
-                onClick={() => setShowEditCompany(false)}
-                className="btn-close"
-              ></button>
-            </div>
-            <form onSubmit={handleUpdateCompany}>
-              <div className="modal-body">
-                <div className="mb-3">
-                  <label className="form-label">Company Name *</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={editCompanyData.name}
-                    onChange={(e) =>
-                      setEditCompanyData({ ...editCompanyData, name: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="mb-3">
-                  <label className="form-label">Company Code *</label>
-                  <input
-                    type="text"
-                    className="form-control bg-light fw-bold text-primary"
-                    value={editCompanyData.code}
-                    readOnly
-                    title="Company code is fixed"
-                  />
-                </div>
-                <div className="mb-3">
-                  <label className="form-label">Location *</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={editCompanyData.location}
-                    onChange={(e) =>
-                      setEditCompanyData({ ...editCompanyData, location: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  onClick={() => setShowEditCompany(false)}
-                  className="btn btn-secondary"
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Update Company
                 </button>
               </div>
             </form>

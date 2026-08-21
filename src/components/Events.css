@@ -1,53 +1,291 @@
-/* Styles for react-calendar are now handled globally in theme.css for better light/dark mode support. */
-/* This file is kept empty to avoid breaking legacy imports, but all logic is moved. */
+/* Event Details Box */
+.event-details-box {
+  padding: 1rem;
+  border-radius: 0.75rem;
+  margin-bottom: 1.5rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Icon Circles */
+.icon-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  margin-right: 0.75rem;
+  width: 32px;
+  height: 32px;
+}
+
+.icon-clock {
+  background-color: #6366f1;
+}
+
+.icon-calendar {
+  background-color: #06b6d4;
+}
+
+.icon-video {
+  background-color: #10b981;
+}
+
+.icon-globe {
+  background-color: #f59e0b;
+}
+
+/* Avatar circle (replaces static profile images) */
+.avatar-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #06b6d4);
+  flex-shrink: 0;
+}
+
+/* Glossy Button Styles */
+.btn-glossy {
+  background-color: #6366f1;
+  color: #ffffff;
+  font-weight: 600;
+  border: none;
+  border-radius: 0.5rem;
+  background-image: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 100%);
+  transition: all 0.2s ease-in-out;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn-glossy:hover:not(.disabled) {
+  filter: brightness(1.15);
+  color: #ffffff;
+}
+
+.btn-glossy.disabled {
+  background-color: #9ca3af;
+  color: #ffffff;
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Timezone Select / Time Inputs */
+.timezone-select {
+  color: var(--text-main);
+  border-color: #6366f1;
+}
+
+/* Selected Date Text */
+.selected-date-text {
+  color: #6366f1;
+}
+
+/* Helper text under inputs (Bootstrap's .form-text is too low-contrast on dark backgrounds by default) */
+.form-text {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+[data-theme='dark'] .form-text {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+/* Time Slots Container (legacy, kept in case still referenced) */
+.time-slots-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.time-slot-btn {
+  border-radius: 8px;
+  width: 80px;
+  padding: 0.5rem 0.75rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  background-color: transparent;
+  color: #6366f1;
+  border: 2px solid #6366f1;
+  cursor: pointer;
+}
+
+.time-slot-btn:hover {
+  background-color: rgba(99, 102, 241, 0.1);
+}
+
+.time-slot-btn.active {
+  background-color: #6366f1;
+  color: #ffffff;
+  border-color: #6366f1;
+  box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3);
+}
+
+.time-slot-btn.booked,
+.time-slot-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  border-color: #9ca3af;
+  color: #9ca3af;
+  text-decoration: line-through;
+}
+
+.time-slot-btn.booked:hover,
+.time-slot-btn:disabled:hover {
+  background-color: transparent;
+}
+
+/* Validation Error */
+.validation-error {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* ===================== React Calendar ===================== */
 
 .react-calendar {
   border: none !important;
   font-family: 'Segoe UI', sans-serif;
   width: 100% !important;
+  background: transparent !important;
 }
 
-.react-calendar__tile {
-  border-radius: 50% !important;
-  padding: 12px 0;
-  font-weight: 500;
-  color: #1a1a1a;
-  transition: 0.2s ease;
-}
-
-.react-calendar__tile--now {
-  background: #e5f0ff !important;
-  color: #007bff !important;
-  border-radius: 50%;
-}
-
-.react-calendar__tile--active {
-  background: #0066ff !important;
-  color: #fff !important;
-  border-radius: 50%;
-}
-
-.react-calendar__tile:enabled:hover {
-  background: #cce5ff !important;
-  border-radius: 50%;
-  cursor: pointer;
+/* Navigation bar (month label + arrows) */
+.react-calendar__navigation {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
 }
 
 .react-calendar__navigation button {
   background: none;
-  font-weight: bold;
+  border: none;
+  font-weight: 700;
   font-size: 1rem;
-  color: #222;
+  color: var(--text-main);
+  padding: 0.4rem 0.65rem;
+  border-radius: 8px;
+  transition: background-color 0.15s ease;
 }
 
+.react-calendar__navigation button:enabled:hover,
+.react-calendar__navigation button:enabled:focus {
+  background-color: rgba(99, 102, 241, 0.15);
+}
+
+.react-calendar__navigation button:disabled {
+  opacity: 0.25;
+}
+
+.react-calendar__navigation__label {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--text-main);
+}
+
+/* Weekday header row */
 .react-calendar__month-view__weekdays {
   text-align: center;
   text-transform: uppercase;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 600;
-  color: #777;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 0.35rem;
 }
 
+.react-calendar__month-view__weekdays abbr {
+  text-decoration: none;
+}
+
+/* Date tiles: fixed circle, not a stretched pill */
+.react-calendar__tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin: 2px auto;
+  padding: 0;
+  border-radius: 50%;
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: var(--text-main);
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+}
+
+.react-calendar__tile:enabled:hover,
+.react-calendar__tile:enabled:focus {
+  background-color: rgba(99, 102, 241, 0.15);
+}
+
+/* Past / unavailable dates: dim instead of the default gray pill */
+.react-calendar__tile:disabled {
+  color: var(--text-main);
+  opacity: 0.28;
+  background: transparent;
+  cursor: not-allowed;
+}
+
+/* Dates belonging to the previous/next month shown for grid filler */
+.react-calendar__month-view__days__day--neighboringMonth {
+  opacity: 0.35;
+}
+
+/* Weekends: soft coral instead of harsh pure red */
 .react-calendar__month-view__days__day--weekend {
-  color: red !important;
+  color: #f87171 !important;
+}
+
+/* Today: outlined circle instead of a light-blue box */
+.react-calendar__tile--now {
+  background: transparent !important;
+  color: var(--text-main) !important;
+  border: 2px solid #6366f1;
+}
+
+/* Selected date: solid filled circle */
+.react-calendar__tile--active {
+  background: #6366f1 !important;
+  color: #fff !important;
+  border: none;
+}
+
+.react-calendar__tile--active.react-calendar__tile--now {
+  border: none;
+}
+
+/* Card contrast fix: prevent text/details from blending into the card background in dark mode */
+[data-theme='dark'] .event-details-box {
+  background-color: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme='dark'] .glass-card {
+  background-color: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+[data-theme='dark'] .glass-card .text-muted {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+[data-theme='dark'] .glass-card .badge.bg-light {
+  background-color: rgba(255, 255, 255, 0.85) !important;
 }

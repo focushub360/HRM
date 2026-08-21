@@ -204,16 +204,32 @@ const Settings = () => {
                                         <label className="form-label d-block text-muted mb-3">Theme Preference</label>
                                         <div className="d-flex gap-3">
                                             <div
-                                                className={`p-3 border rounded text-center ${theme === 'light' ? 'border-primary bg-primary bg-opacity-10' : 'border-secondary'}`}
-                                                style={{ width: '150px', cursor: 'pointer', color: 'var(--text-main)' }}
+                                                style={{
+                                                    width: '150px',
+                                                    cursor: 'pointer',
+                                                    color: theme === 'light' ? '#4f46e5' : 'var(--text-main)',
+                                                    padding: '1rem',
+                                                    borderRadius: '8px',
+                                                    textAlign: 'center',
+                                                    border: theme === 'light' ? '2px solid #4f46e5' : '1px solid var(--border-color)',
+                                                    background: theme === 'light' ? 'rgba(79, 70, 229, 0.1)' : 'transparent'
+                                                }}
                                                 onClick={() => { if (theme !== 'light') toggleTheme(); }}
                                             >
                                                 <i className="bi bi-brightness-high fs-2 mb-2 d-block"></i>
                                                 Light Mode
                                             </div>
                                             <div
-                                                className={`p-3 border rounded text-center ${theme === 'dark' ? 'border-primary bg-primary bg-opacity-10' : 'border-secondary'}`}
-                                                style={{ width: '150px', cursor: 'pointer', color: 'var(--text-main)' }}
+                                                style={{
+                                                    width: '150px',
+                                                    cursor: 'pointer',
+                                                    color: theme === 'dark' ? '#818cf8' : 'var(--text-main)',
+                                                    padding: '1rem',
+                                                    borderRadius: '8px',
+                                                    textAlign: 'center',
+                                                    border: theme === 'dark' ? '2px solid #818cf8' : '1px solid var(--border-color)',
+                                                    background: theme === 'dark' ? 'rgba(129, 140, 248, 0.15)' : 'transparent'
+                                                }}
                                                 onClick={() => { if (theme !== 'dark') toggleTheme(); }}
                                             >
                                                 <i className="bi bi-moon-stars fs-2 mb-2 d-block"></i>
@@ -298,7 +314,7 @@ const Settings = () => {
                             {activeTab === 'attendance' && (
                                 <div className="animate-fade-in">
                                     <h4 className="border-bottom border-secondary pb-3 mb-4">Attendance Configuration</h4>
-                                    <div className="alert alert-info border-0 bg-opacity-10 bg-info text-info">
+                                    <div className="alert border-0" style={{ background: theme === 'dark' ? 'rgba(6, 182, 212, 0.18)' : 'rgba(6, 182, 212, 0.12)', color: theme === 'dark' ? '#22d3ee' : '#0e7490' }}>
                                         <i className="bi bi-info-circle me-2"></i>
                                         These settings define how employee attendance is tracked and flagged.
                                     </div>
@@ -384,7 +400,7 @@ const Settings = () => {
                                 <div className="animate-fade-in">
                                     <h4 className="border-bottom border-secondary pb-3 mb-4">Security & Credentials</h4>
 
-                                    <div className="alert alert-warning border-0 bg-opacity-10 bg-warning text-warning mb-4">
+                                    <div className="alert border-0 mb-4" style={{ background: theme === 'dark' ? 'rgba(245, 158, 11, 0.18)' : 'rgba(245, 158, 11, 0.15)', color: theme === 'dark' ? '#fbbf24' : '#92400e' }}>
                                         <i className="bi bi-exclamation-triangle me-2"></i>
                                         <b>Admin Only:</b> View and manage user credentials. Ensure you are in a secure environment.
                                     </div>

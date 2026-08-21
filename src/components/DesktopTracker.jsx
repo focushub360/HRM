@@ -148,7 +148,7 @@ const DesktopTracker = () => {
                         <div className="row g-4 justify-content-center">
                             {/* Current App Card */}
                             <div className="col-md-6 col-lg-5">
-                                <div className="p-4 rounded-4 h-100 text-center glass-card" style={{ background: 'white' }}>
+                                <div className="p-4 rounded-4 h-100 text-center glass-card" style={{ background: 'var(--surface)' }}>
                                     <div className="mb-3">
                                         <i className="bi bi-window-stack text-primary" style={{ fontSize: '2.5rem' }}></i>
                                     </div>
@@ -182,7 +182,7 @@ const DesktopTracker = () => {
                             <div className="col-lg-10">
                                 <div className="p-4 rounded-4 text-center mt-2 glass-card" style={{ background: 'rgba(255,255,255,0.6)', borderStyle: 'dashed' }}>
                                     <h6 className="text-muted text-uppercase fw-bold small ls-1 mb-3">Window / Browser Tab Details</h6>
-                                    <p className="fs-5 text-dark fw-medium mb-0 text-break" style={{ fontFamily: 'monospace', color: '#333' }}>
+                                    <p className="fs-5 fw-medium mb-0 text-break" style={{ fontFamily: 'monospace', color: 'var(--text-main)' }}>
                                         {lastActivity.activeWindow?.title || 'No active window detected'}
                                     </p>
                                 </div>
@@ -190,7 +190,7 @@ const DesktopTracker = () => {
 
                             {/* Session Pie Chart */}
                             <div className="col-lg-10">
-                                <div className="p-4 rounded-4 h-100 glass-card" style={{ background: 'white' }}>
+                                <div className="p-4 rounded-4 h-100 glass-card" style={{ background: 'var(--surface)' }}>
                                     <ApplicationUsageChart data={sessionStats} />
                                 </div>
                             </div>

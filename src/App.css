@@ -149,18 +149,8 @@ body {
   max-width: 180px;
   height: auto;
   object-fit: contain;
+  border-radius: 8px;
   transition: filter 0.3s ease;
-}
-
-/* Invert Logo for Light Mode (assuming original logo is white/light) 
-   OR if original is dark, we might need different logic.
-   Let's assume standard behavior: Logo.png is likely the colored/dark one?
-   Actually, looking at previous sidebar CSS (--bg-sidebar: #1e1b4b), the old logo worked on Dark.
-   So the logo is likely Light/White. 
-   So on new Light Sidebar (#ffffff), we need to Turn it Dark.
-*/
-[data-theme='light'] .logo {
-  filter: none;
 }
 
 .theme-toggle-container {
@@ -363,7 +353,22 @@ input:checked+.slider .bi-moon-fill {
 
 .nav-item .icon svg {
   color: var(--text-sidebar);
-  transition: color 0.3s ease;
+  opacity: 0.85;
+  transition: color 0.3s ease, opacity 0.3s ease;
+}
+
+.nav-item:hover .icon svg {
+  opacity: 1;
+}
+
+[data-theme='dark'] .nav-item .icon svg {
+  color: #e2e8f0;
+  opacity: 0.9;
+}
+
+[data-theme='dark'] .nav-item:hover .icon svg {
+  color: #ffffff;
+  opacity: 1;
 }
 
 .nav-item:hover {
@@ -384,6 +389,12 @@ input:checked+.slider .bi-moon-fill {
 
 .nav-item.active .icon svg {
   color: var(--text-sidebar-active);
+  opacity: 1;
+}
+
+[data-theme='dark'] .nav-item.active .icon svg {
+  color: #ffffff;
+  opacity: 1;
 }
 
 /* Sidebar Footer */

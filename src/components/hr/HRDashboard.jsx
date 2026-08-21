@@ -25,7 +25,9 @@ import LiveMonitoring from "./LiveMonitoring";
 const HRDashboard = () => {
   const { user, companies, addEmployeeToCompany, removeEmployeeFromCompany } = useAuth();
   const { theme } = useTheme();
+  
   const [showAddEmployee, setShowAddEmployee] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newEmployee, setNewEmployee] = useState({
     name: "",
     email: "",
@@ -48,42 +50,58 @@ const HRDashboard = () => {
 
   const handleAddEmployee = async (e) => {
     e.preventDefault();
+    
     if (!newEmployee.name || !newEmployee.email || !newEmployee.employeeType) {
       alert("Please fill all required fields");
       return;
     }
-    const result = await addEmployeeToCompany(user.companyId, {
-      name: newEmployee.name,
-      email: newEmployee.email,
-      employeeType: newEmployee.employeeType,
-      role: newEmployee.role,
-      shift: {
-        startTime: newEmployee.shiftStartTime,
-        endTime: newEmployee.shiftEndTime
-      }
-    });
-
-    if (result && result.error) {
-      alert(result.error);
-    } else if (result && result.employeeAccount) {
-      setNewEmployee({ name: "", email: "", employeeType: "office", role: "employee", shiftStartTime: "09:00", shiftEndTime: "18:00" });
-      setShowAddEmployee(false);
-      setSuccessModal({
-        isOpen: true,
-        title: "Employee Created!",
-        message: `Employee "${newEmployee.name}" has been successfully added.`,
-        subMessage: (
-          <div className="text-start">
-            <p className="mb-1"><strong>Employee ID:</strong> {result.employeeAccount.empId}</p>
-            <p className="mb-1"><strong>Password:</strong> {result.employeeAccount.password}</p>
-            <p className="mb-0"><strong>Type:</strong> <span className="text-capitalize">{result.employeeAccount.employeeType}</span></p>
-            <small className="text-muted d-block mt-2 fst-italic">Please copy credentials immediately.</small>
-          </div>
-        )
+    
+    setIsSubmitting(true);
+    try {
+      const result = await addEmployeeToCompany(user.companyId, {
+        name: newEmployee.name,
+        email: newEmployee.email,
+        employeeType: newEmployee.employeeType,
+        role: newEmployee.role,
+        shift: {
+          startTime: newEmployee.shiftStartTime,
+          endTime: newEmployee.shiftEndTime
+        }
       });
-    } else {
-      alert("Failed to create employee.");
+
+      if (result && result.error) {
+        alert(result.error);
+      } else if (result && result.employeeAccount) {
+        setNewEmployee({ name: "", email: "", employeeType: "office", role: "employee", shiftStartTime: "09:00", shiftEndTime: "18:00" });
+        setShowAddEmployee(false);
+        
+        setSuccessModal({
+          isOpen: true,
+          title: "Employee Created!",
+          message: `Employee "${newEmployee.name}" has been successfully added.`,
+          subMessage: (
+            <div className="text-start">
+              <p className="mb-1"><strong>Employee ID:</strong> {result.employeeAccount.empId}</p>
+              <p className="mb-1"><strong>Password:</strong> {result.employeeAccount.password}</p>
+              <p className="mb-0"><strong>Type:</strong> <span className="text-capitalize">{result.employeeAccount.employeeType}</span></p>
+              <small className="text-muted d-block mt-2 fst-italic">Please copy credentials immediately.</small>
+            </div>
+          )
+        });
+      } else {
+        alert("Failed to create employee.");
+      }
+    } catch (error) {
+      console.error("Error creating employee:", error);
+      alert("An unexpected error occurred while creating the employee.");
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const handleCancelAdd = () => {
+    setShowAddEmployee(false);
+    setNewEmployee({ name: "", email: "", employeeType: "office", role: "employee", shiftStartTime: "09:00", shiftEndTime: "18:00" });
   };
 
   const handleDeleteEmployee = (empId) => {
@@ -121,6 +139,17 @@ const HRDashboard = () => {
     if (hour < 12) return "Good Morning";
     if (hour < 18) return "Good Afternoon";
     return "Good Evening";
+  };
+
+  // Shared compact input style to ensure uniform, small, and contained sizing
+  const compactInputStyle = {
+    fontSize: '0.9rem',
+    padding: '0.5rem 0.75rem',
+    backgroundColor: 'var(--bg-main, #f8fafc)',
+    border: '1px solid var(--border-color, #e2e8f0)',
+    color: 'var(--text-main, #0f172a)',
+    borderRadius: '8px',
+    height: 'auto'
   };
 
   return (
@@ -243,6 +272,154 @@ const HRDashboard = () => {
         </div>
       </div>
 
+      {/* Premium Scrollable Add Employee Modal */}
+      {showAddEmployee && (
+        <div 
+          className="modal fade show d-block" 
+          tabIndex="-1" 
+          role="dialog"
+          style={{ 
+            backgroundColor: 'rgba(0, 0, 0, 0.6)', 
+            backdropFilter: 'blur(4px)',
+            zIndex: 1050 
+          }}
+          onClick={handleCancelAdd}
+        >
+          <div 
+            className="modal-dialog modal-dialog-centered modal-dialog-scrollable" 
+            role="document"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '600px' }}
+          >
+            <div className="modal-content border-0 shadow-lg" style={{ borderRadius: '16px', overflow: 'hidden' }}>
+              <div className="modal-header border-0 px-4 pt-4 pb-0">
+                <h5 className="modal-title fw-bold" style={{ color: 'var(--text-main, #0f172a)' }}>
+                  <FaUserPlus className="me-2 text-primary" /> Add New Employee
+                </h5>
+                <button
+                  type="button"
+                  onClick={handleCancelAdd}
+                  className="btn-close"
+                  aria-label="Close"
+                ></button>
+              </div>
+              
+              <form onSubmit={handleAddEmployee}>
+                <div className="modal-body px-4 py-4" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+                  <div className="row g-3">
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold small text-uppercase text-muted mb-1">Full Name</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={newEmployee.name}
+                        onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })}
+                        placeholder="e.g. John Doe"
+                        required
+                        style={compactInputStyle}
+                      />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold small text-uppercase text-muted mb-1">Email Address</label>
+                      <input
+                        type="email"
+                        className="form-control"
+                        value={newEmployee.email}
+                        onChange={(e) => setNewEmployee({ ...newEmployee, email: e.target.value })}
+                        placeholder="name@company.com"
+                        required
+                        style={compactInputStyle}
+                      />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold small text-uppercase text-muted mb-1">Role</label>
+                      <select
+                        className="form-select"
+                        value={newEmployee.role}
+                        onChange={(e) => setNewEmployee({ ...newEmployee, role: e.target.value })}
+                        style={compactInputStyle}
+                      >
+                        <option value="employee">Standard Employee</option>
+                        <option value="project_manager">Project Manager (Team Lead)</option>
+                      </select>
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold small text-uppercase text-muted mb-1">Employee Type</label>
+                      <select
+                        className="form-select"
+                        value={newEmployee.employeeType}
+                        onChange={(e) => setNewEmployee({ ...newEmployee, employeeType: e.target.value })}
+                        style={compactInputStyle}
+                      >
+                        <option value="office">Office Staff</option>
+                        <option value="sales">Field Sales Agent</option>
+                        <option value="wfh">Remote / WFH</option>
+                      </select>
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold small text-uppercase text-muted mb-1">Shift Start</label>
+                      <input
+                        type="time"
+                        className="form-control"
+                        value={newEmployee.shiftStartTime}
+                        onChange={(e) => setNewEmployee({ ...newEmployee, shiftStartTime: e.target.value })}
+                        style={compactInputStyle}
+                      />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold small text-uppercase text-muted mb-1">Shift End</label>
+                      <input
+                        type="time"
+                        className="form-control"
+                        value={newEmployee.shiftEndTime}
+                        onChange={(e) => setNewEmployee({ ...newEmployee, shiftEndTime: e.target.value })}
+                        style={compactInputStyle}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="alert border-0 rounded-3 p-3 d-flex align-items-start gap-3 mt-4 mb-0" style={{ backgroundColor: 'rgba(99, 102, 241, 0.1)', color: 'var(--primary, #4f46e5)' }}>
+                    <FaInfoCircle className="mt-1 flex-shrink-0" size={16} />
+                    <div className="small" style={{ fontSize: '0.85rem' }}>
+                      <strong>Note:</strong> Employee ID and Password will be auto-generated upon creation. Please ensure the email address is correct.
+                    </div>
+                  </div>
+                </div>
+
+                <div className="modal-footer border-0 px-4 pb-4 pt-0">
+                  <button
+                    type="button"
+                    onClick={handleCancelAdd}
+                    className="btn btn-outline-secondary px-4 py-2 rounded-3 fw-semibold"
+                    style={{ fontSize: '0.9rem' }}
+                    disabled={isSubmitting}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="btn btn-primary px-4 py-2 rounded-3 shadow-sm fw-semibold d-flex align-items-center gap-2"
+                    style={{ fontSize: '0.9rem' }}
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <FaUserPlus size={14} /> Create Employee
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Employees Table */}
       <div className="card border-0 shadow-sm" style={{ display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-card)', borderRadius: '12px', marginBottom: '20px' }}>
         <div className="card-header border-0 bg-transparent py-3 d-flex justify-content-between align-items-center">
@@ -315,7 +492,7 @@ const HRDashboard = () => {
                 ))}
               </tbody>
             </table>
-            {(company.employeeAccounts || []).length === 0 && (
+            {(company.employeeAccounts || []).length === 0 && !showAddEmployee && (
               <div className="p-5 text-center d-flex flex-column align-items-center justify-content-center" style={{ minHeight: '300px' }}>
                 <div className="rounded-circle bg-light d-flex align-items-center justify-content-center mb-4" style={{ width: '80px', height: '80px' }}>
                   <FaUsers size={32} className="text-primary opacity-50" />
@@ -331,169 +508,6 @@ const HRDashboard = () => {
         </div>
       </div>
 
-      {/* Add Employee Modal */}
-      {
-        showAddEmployee && (
-          <div className="modal d-block" style={{
-            backgroundColor: 'rgba(0,0,0,0.6)',
-            backdropFilter: 'blur(5px)'
-          }}>
-            <div className="modal-dialog modal-dialog-centered">
-              <div className="modal-content border-0 shadow-lg" style={{
-                backgroundColor: '#ffffff',
-                color: '#1e293b',
-                borderRadius: '16px',
-                overflow: 'hidden'
-              }}>
-                <div className="modal-header border-0 p-4 pb-0">
-                  <h4 className="modal-title fw-bold" style={{ color: '#0f172a' }}>Add New Employee</h4>
-                  <button
-                    type="button"
-                    onClick={() => setShowAddEmployee(false)}
-                    className="btn-close shadow-none"
-                    style={{ filter: 'none' }}
-                  ></button>
-                </div>
-                <form onSubmit={handleAddEmployee}>
-                  <div className="modal-body p-4">
-                    <div className="mb-4">
-                      <label className="form-label mb-2 fw-bold text-dark" style={{ fontSize: '0.9rem' }}>FULL NAME</label>
-                      <input
-                        type="text"
-                        className="form-control form-control-lg"
-                        value={newEmployee.name}
-                        onChange={(e) =>
-                          setNewEmployee({ ...newEmployee, name: e.target.value })
-                        }
-                        placeholder="e.g. John Doe"
-                        style={{
-                          backgroundColor: '#f8fafc',
-                          color: '#0f172a',
-                          borderRadius: '8px',
-                          border: '2px solid #e2e8f0',
-                          fontSize: '1rem'
-                        }}
-                      />
-                    </div>
-                    <div className="mb-4">
-                      <label className="form-label mb-2 fw-bold text-dark" style={{ fontSize: '0.9rem' }}>EMAIL ADDRESS</label>
-                      <input
-                        type="email"
-                        className="form-control form-control-lg"
-                        value={newEmployee.email}
-                        onChange={(e) =>
-                          setNewEmployee({ ...newEmployee, email: e.target.value })
-                        }
-                        placeholder="name@company.com"
-                        style={{
-                          backgroundColor: '#f8fafc',
-                          color: '#0f172a',
-                          borderRadius: '8px',
-                          border: '2px solid #e2e8f0',
-                          fontSize: '1rem'
-                        }}
-                      />
-                    </div>
-                    <div className="mb-4">
-                      <label className="form-label mb-2 fw-bold text-dark" style={{ fontSize: '0.9rem' }}>ROLE</label>
-                      <select
-                        className="form-select form-select-lg mb-3"
-                        value={newEmployee.role}
-                        onChange={(e) =>
-                          setNewEmployee({ ...newEmployee, role: e.target.value })
-                        }
-                        style={{
-                          backgroundColor: '#f8fafc',
-                          color: '#0f172a',
-                          borderRadius: '8px',
-                          border: '2px solid #e2e8f0',
-                          fontSize: '1rem'
-                        }}
-                      >
-                        <option value="employee">Standard Employee</option>
-                        <option value="project_manager">Project Manager (Team Lead)</option>
-                      </select>
-
-                      <label className="form-label mb-2 fw-bold text-dark" style={{ fontSize: '0.9rem' }}>EMPLOYEE TYPE</label>
-                      <select
-                        className="form-select form-select-lg"
-                        value={newEmployee.employeeType}
-                        onChange={(e) =>
-                          setNewEmployee({ ...newEmployee, employeeType: e.target.value })
-                        }
-                        style={{
-                          backgroundColor: '#f8fafc',
-                          color: '#0f172a',
-                          borderRadius: '8px',
-                          border: '2px solid #e2e8f0',
-                          fontSize: '1rem'
-                        }}
-                      >
-                        <option value="office">Office Staff</option>
-                        <option value="sales">Field Sales Agent</option>
-                        <option value="wfh">Remote / WFH</option>
-                      </select>
-                    </div>
-                    <div className="mb-4">
-                      <div className="row">
-                        <div className="col-6">
-                          <label className="form-label mb-2 fw-bold text-dark" style={{ fontSize: '0.9rem' }}>SHIFT START</label>
-                          <input
-                            type="time"
-                            className="form-control form-control-lg"
-                            value={newEmployee.shiftStartTime}
-                            onChange={(e) => setNewEmployee({ ...newEmployee, shiftStartTime: e.target.value })}
-                            style={{
-                              backgroundColor: '#f8fafc',
-                              color: '#0f172a',
-                              borderRadius: '8px',
-                              border: '2px solid #e2e8f0',
-                              fontSize: '1rem'
-                            }}
-                          />
-                        </div>
-                        <div className="col-6">
-                          <label className="form-label mb-2 fw-bold text-dark" style={{ fontSize: '0.9rem' }}>SHIFT END</label>
-                          <input
-                            type="time"
-                            className="form-control form-control-lg"
-                            value={newEmployee.shiftEndTime}
-                            onChange={(e) => setNewEmployee({ ...newEmployee, shiftEndTime: e.target.value })}
-                            style={{
-                              backgroundColor: '#f8fafc',
-                              color: '#0f172a',
-                              borderRadius: '8px',
-                              border: '2px solid #e2e8f0',
-                              fontSize: '1rem'
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="alert alert-primary border-0 rounded-3 p-3 d-flex align-items-center gap-3 mb-0">
-                      <FaInfoCircle size={18} className="text-primary" />
-                      <span className="small fw-bold text-primary">Credentials (ID & Password) will be auto-generated.</span>
-                    </div>
-                  </div>
-                  <div className="modal-footer border-0 p-4 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowAddEmployee(false)}
-                      className="btn btn-outline-secondary px-4 py-2 rounded-3 fw-bold decoration-none text-dark"
-                    >
-                      Cancel
-                    </button>
-                    <button type="submit" className="btn btn-primary px-5 py-2 rounded-3 shadow-sm fw-bold">
-                      Create Employee
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          </div>
-        )
-      }
-
       {/* Success Modal */}
       <SuccessModal
         isOpen={successModal.isOpen}
@@ -502,9 +516,8 @@ const HRDashboard = () => {
         message={successModal.message}
         subMessage={successModal.subMessage}
       />
-    </div >
+    </div>
   );
 };
 
 export default HRDashboard;
-

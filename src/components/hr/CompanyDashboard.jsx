@@ -47,7 +47,7 @@ const CompanyDashboard = () => {
           <div className="d-flex align-items-center gap-2">
             <h1 className="mb-0 fs-3">Company Admin Dashboard</h1>
             <span className="badge bg-danger d-flex align-items-center gap-1 pulse-slow" style={{ fontSize: '0.75rem', height: 'fit-content', padding: '0.3rem 0.5rem' }}>
-              <span className="rounded-circle bg-white" style={{ width: '6px', height: '6px' }}></span>
+              <span className="rounded-circle" style={{ width: '6px', height: '6px', backgroundColor: '#ffffff' }}></span>
               LIVE
             </span>
           </div>
@@ -72,7 +72,7 @@ const CompanyDashboard = () => {
                 {user?.profileImage ? (
                   <img src={user.profileImage} alt="Profile" className="w-100 h-100 object-fit-cover" />
                 ) : user?.role === 'admin' ? (
-                  <div className="w-100 h-100 bg-white p-1 d-flex align-items-center justify-content-center">
+                  <div className="w-100 h-100 p-1 d-flex align-items-center justify-content-center" style={{ backgroundColor: '#ffffff' }}>
                     <img src={companyLogo} alt="Admin" className="img-fluid" style={{ maxHeight: '100%', objectFit: 'contain' }} />
                   </div>
                 ) : (
@@ -246,4 +246,3 @@ const CompanyDashboard = () => {
 };
 
 export default CompanyDashboard;
-

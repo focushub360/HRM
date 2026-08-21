@@ -1,446 +1,1057 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { storage } from '../firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { FaCamera, FaSave, FaTimes, FaEdit, FaUser, FaBuilding, FaMapMarkerAlt, FaEnvelope, FaPhone, FaIdCard, FaSignOutAlt, FaTrash, FaKey } from 'react-icons/fa';
+import { getDownloadURL, ref as storageRef } from 'firebase/storage';
+import {
+    FaCamera, FaSave, FaTimes, FaEdit, FaUser, FaMapMarkerAlt, FaEnvelope,
+    FaPhone, FaIdCard, FaSignOutAlt, FaTrash, FaKey, FaChevronDown,
+    FaBriefcase, FaUserFriends, FaGraduationCap, FaPlus, FaLock, FaCheck
+} from 'react-icons/fa';
 import ChangePasswordModal from './common/ChangePasswordModal';
 import SuccessModal from './common/SuccessModal';
-import companyLogo from '../assets/Logo.png';
+import CustomDatePicker from './CustomDatePicker';
 
-const RenderField = ({ label, name, value, type = "text", disabled = false, onChange, isEditing, max }) => (
-    <div className="mb-3 col-md-6">
-        <label className="form-label text-muted small text-uppercase fw-bold">{label}</label>
-        {isEditing && !disabled ? (
-            <input
-                type={type}
-                className="form-control"
-                name={name}
-                value={value}
-                onChange={onChange}
-                max={max}
-            />
-        ) : (
-            <div className="fw-medium border-bottom pb-1">{value || 'N/A'}</div>
-        )}
-    </div>
-);
+// ---------------------------------------------------------------------------
+// Static option lists
+// ---------------------------------------------------------------------------
+const GENDER_OPTIONS = ['Male', 'Female', 'Other'];
+const MARITAL_OPTIONS = ['Single', 'Married', 'Divorced', 'Widowed'];
+const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+const WORK_MODE_OPTIONS = ['Office', 'Remote', 'Hybrid'];
+const EMPLOYEE_TYPE_OPTIONS = ['Full Time', 'Part Time', 'Contract', 'Intern'];
+const RELATIONSHIP_OPTIONS = ['Father', 'Mother', 'Spouse', 'Sibling', 'Child', 'Friend', 'Other'];
 
-const Profile = () => {
-    const { user, login, logout } = useAuth();
-    const [isEditing, setIsEditing] = useState(false);
-    const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
-    const [successModal, setSuccessModal] = useState({ isOpen: false, title: '', message: '' });
+const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://hrms-backend-22uq.onrender.com/api');
 
-    // State for form fields
-    const [formData, setFormData] = useState({
-        name: '',
-        email: '',
-        phone: '',
-        gender: '',
-        dob: '',
-        address: {
-            street: '',
-            city: '',
-            state: '',
-            postalCode: '',
-            country: ''
-        },
-        profileImage: null
-    });
+const emptyEmergencyContact = () => ({
+    id: `ec_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    name: '', relationship: '', primaryPhone: '', alternatePhone: '', email: '', address: ''
+});
 
-    const [previewImage, setPreviewImage] = useState(null);
+const emptyEducation = () => ({
+    id: `ed_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    qualification: '', degree: '', specialization: '', institution: '', yearOfPassing: '', percentage: ''
+});
 
-    // Initialize data
-    useEffect(() => {
-        if (user) {
-            setFormData({
-                name: user.name || '',
-                email: user.email || '',
-                phone: user.phone || '',
-                gender: user.gender || 'Not Specified',
-                dob: user.dob || '',
-                address: {
-                    street: user.address?.street || '',
-                    city: user.address?.city || '',
-                    state: user.address?.state || '',
-                    postalCode: user.address?.postalCode || '',
-                    country: user.address?.country || ''
-                },
-                profileImage: user.profileImage || null
-            });
-            setPreviewImage(user.profileImage || null);
-        }
-    }, [user]);
+const deepClone = (obj) => JSON.parse(JSON.stringify(obj));
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        if (name.includes('.')) {
-            const [parent, child] = name.split('.');
-            setFormData(prev => ({
-                ...prev,
-                [parent]: {
-                    ...prev[parent],
-                    [child]: value
-                }
-            }));
-        } else {
-            setFormData(prev => ({ ...prev, [name]: value }));
-        }
-    };
+/**
+ * Some backends store `shift` as a string ("General Shift"), others as a
+ * time-range object ({ startTime, endTime }). Normalize either shape into a
+ * plain display string so it's always safe to render / edit as text.
+ */
+const formatShiftValue = (shift) => {
+    if (!shift) return '';
+    if (typeof shift === 'string') return shift;
+    if (typeof shift === 'object') {
+        const { startTime, endTime, name, label } = shift;
+        if (name) return name;
+        if (label) return label;
+        if (startTime || endTime) return `${startTime || ''}${startTime && endTime ? ' - ' : ''}${endTime || ''}`;
+    }
+    return '';
+};
 
-    const handleImageChange = async (e) => {
-        if (e.target.files[0]) {
-            const file = e.target.files[0];
-            setPreviewImage(URL.createObjectURL(file));
-            setFormData(prev => ({ ...prev, newImageFile: file, deleteImage: false }));
-        }
-    };
+// ---------------------------------------------------------------------------
+// Small presentational building blocks
+// ---------------------------------------------------------------------------
 
-    const handleDeleteImage = () => {
-        if (window.confirm("Are you sure you want to remove your profile photo?")) {
-            setPreviewImage(null);
-            setFormData(prev => ({ ...prev, profileImage: null, newImageFile: null, deleteImage: true }));
-        }
-    };
+/** Guards against rendering raw objects/arrays that sometimes leak in from
+ *  inconsistent backend shapes (e.g. shift stored as {startTime,endTime}). */
+const safeDisplay = (value) => {
+    if (value === null || value === undefined || value === '') return null;
+    if (typeof value === 'string' || typeof value === 'number') return value;
+    if (typeof value === 'object') {
+        if (value.name) return value.name;
+        if (value.label) return value.label;
+        if (value.startTime || value.endTime) return `${value.startTime || ''}${value.startTime && value.endTime ? ' - ' : ''}${value.endTime || ''}`;
+        return JSON.stringify(value);
+    }
+    return String(value);
+};
 
-    const [loadingText, setLoadingText] = useState("");
-    const isProfileEditable = !(user?.role === 'admin' || user?.type === 'company' || user?.type === 'company_admin');
-
-    // Helper: Compress Image to DataURL (Base64) - Resizing to 500x500 for speed
-    const compressImage = (file) => {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = (event) => {
-                const img = new Image();
-                img.src = event.target.result;
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 500; // Smaller size for instant upload
-                    const MAX_HEIGHT = 500;
-                    let width = img.width;
-                    let height = img.height;
-
-                    if (width > height) {
-                        if (width > MAX_WIDTH) {
-                            height *= MAX_WIDTH / width;
-                            width = MAX_WIDTH;
-                        }
-                    } else {
-                        if (height > MAX_HEIGHT) {
-                            width *= MAX_HEIGHT / height;
-                            height = MAX_HEIGHT;
-                        }
-                    }
-
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-
-                    // Return Base64 string directly
-                    resolve(canvas.toDataURL('image/jpeg', 0.7));
-                };
-                img.onerror = (err) => reject(new Error("Image load failed"));
-            };
-            reader.onerror = (error) => reject(error);
-        });
-    };
-
-    const handleSave = async () => {
-        if (!isProfileEditable) {
-            return;
-        }
-        setLoadingText("Saving...");
-        try {
-            let imageUrl = formData.profileImage;
-
-            // 1. Process new image
-            if (formData.newImageFile) {
-                setLoadingText("Optimizing Image...");
-                try {
-                    // Compress to Base64 string (Tiny ~30-50KB)
-                    const compressedBase64 = await compressImage(formData.newImageFile);
-
-                    setLoadingText("Uploading...");
-
-                    // Attempt Firebase Upload with Timeout
-                    const uploadPromise = async () => {
-                        const fileName = `profile_${user.id}_${Date.now()}.jpg`;
-                        const storageRef = ref(storage, `profile_images/${fileName}`);
-                        // Upload the Base64 string
-                        const { uploadString } = await import('firebase/storage');
-                        const snapshot = await uploadString(storageRef, compressedBase64, 'data_url');
-                        return getDownloadURL(snapshot.ref);
-                    };
-
-                    // Race: Upload vs 5-second timeout
-                    const timeoutPromise = new Promise((_, reject) =>
-                        setTimeout(() => reject(new Error("Upload timed out")), 8000)
-                    );
-
-                    try {
-                        imageUrl = await Promise.race([uploadPromise(), timeoutPromise]);
-                        console.log("Uploaded to Firebase Storage:", imageUrl);
-                    } catch (uploadError) {
-                        console.warn("Storage upload failed/slow, using Base64 fallback:", uploadError);
-                        // Fallback: Save the Base64 string directly to DB
-                        // Since it's 500x500 compressed, it's safe for Firestore (~50KB)
-                        imageUrl = compressedBase64;
-                    }
-
-                } catch (imgError) {
-                    console.error("Image processing failed:", imgError);
-                    alert("Failed to process image. Please try another file.");
-                    setLoadingText("");
-                    return;
-                }
-            } else if (formData.deleteImage) {
-                imageUrl = null;
-            }
-
-            // 2. Prepare payload
-            setLoadingText("Updating Profile...");
-            const updatePayload = {
-                name: formData.name,
-                phone: formData.phone,
-                gender: formData.gender,
-                dob: formData.dob,
-                address: formData.address,
-                profileImage: imageUrl
-            };
-
-            // 3. Send to Backend
-            let endpoint = "";
-            let method = "PUT";
-
-            if (user.type === 'hr') {
-                endpoint = `${import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://hrms-backend-22uq.onrender.com/api')}/companies/${user.companyId}/hr/${user.id}`;
-            } else if (user.type === 'company' || user.role === 'admin') {
-                endpoint = `${import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://hrms-backend-22uq.onrender.com/api')}/companies/${user.companyId}/admin`;
-            } else {
-                endpoint = `${import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://hrms-backend-22uq.onrender.com/api')}/companies/${user.companyId}/employees/${user.id}`;
-            }
-
-            const response = await fetch(endpoint, {
-                method: method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updatePayload)
-            });
-
-            if (!response.ok) throw new Error("Failed to update profile");
-
-            const updatedUserFromBackend = await response.json();
-
-            // 4. Update Local Context
-            const newUserData = {
-                ...user,
-                ...updatedUserFromBackend,
-                profileImage: imageUrl // Force update from local state/upload result
-            };
-
-            login(newUserData);
-            setIsEditing(false);
-            setSuccessModal({
-                isOpen: true,
-                title: 'Success!',
-                message: 'Profile updated successfully!'
-            });
-
-        } catch (error) {
-            console.error("Update failed:", error);
-            alert("Failed to update profile. " + error.message);
-        } finally {
-            setLoadingText("");
-        }
-    };
-
-    if (!user) return <div className="p-5 text-center">Loading Profile...</div>;
-
+/** Text / phone / email input with a read-only display state */
+const TextField = ({ label, value, onChange, isEditing, type = 'text', locked = false, placeholder, colSpan = 6 }) => {
+    const displayValue = safeDisplay(value);
+    const inputValue = (typeof value === 'string' || typeof value === 'number') ? value : '';
     return (
-        <div className="container-fluid py-4" style={{ backgroundColor: '#f8f9fa', minHeight: '100vh' }}>
-            {/* Header */}
-            <div className="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h2 className="fw-bold mb-1">My Profile</h2>
-                    <p className="text-muted">Manage your personal information</p>
-                </div>
-                <div className="d-flex gap-2 align-items-center">
-                    {!isEditing ? (
-                        <>
-                            <button
-                                className="btn btn-danger d-flex align-items-center gap-2 px-4 rounded-pill shadow-sm me-2"
-                                onClick={() => logout()}
-                            >
-                                <FaSignOutAlt /> Sign Out
-                            </button>
-                            <button className="btn btn-warning me-2" onClick={() => setIsPasswordModalOpen(true)}>
-                                <FaKey className="me-2" /> Change Password
-                            </button>
-                            {isProfileEditable && (
-                                <button className="btn btn-primary" onClick={() => setIsEditing(true)}>
-                                    <FaEdit className="me-2" /> Edit Profile
-                                </button>
-                            )}
-                        </>
-                    ) : (
-                        <div className="d-flex gap-2">
-                            <button className="btn btn-secondary" onClick={() => { setIsEditing(false); setPreviewImage(user.profileImage); }}>
-                                <FaTimes className="me-2" /> Cancel
-                            </button>
-                            <button className="btn btn-success" onClick={handleSave} disabled={!!loadingText}>
-                                {loadingText ? (
-                                    <>
-                                        <span className="spinner-border spinner-border-sm me-2"></span>
-                                        {loadingText}
-                                    </>
-                                ) : (
-                                    <>
-                                        <FaSave className="me-2" /> Save Changes
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            <div className="row g-4">
-                {/* Left Column: Photo & Core Identity */}
-                <div className="col-lg-4">
-                    <div className="card shadow-sm border-0 mb-4 h-100">
-                        <div className="card-body text-center pt-5">
-                            <div className="position-relative d-inline-block mb-4">
-                                <div className="rounded-circle overflow-hidden border border-4 border-light shadow" style={{ width: '150px', height: '150px', backgroundColor: '#e9ecef' }}>
-                                    {previewImage ? (
-                                        <img src={previewImage} alt="Profile" className="w-100 h-100 object-fit-cover" />
-                                    ) : user?.role === 'admin' ? (
-                                        <div className="w-100 h-100 d-flex align-items-center justify-content-center p-3 bg-white">
-                                            <img src={companyLogo} alt="Company Logo" className="img-fluid" style={{ maxHeight: '100%', objectFit: 'contain' }} />
-                                        </div>
-                                    ) : (
-                                        <div className="w-100 h-100 d-flex align-items-center justify-content-center text-secondary display-1 fw-bold">
-                                            {user.name?.charAt(0).toUpperCase()}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Edit & Delete Icons */}
-                                {isEditing && isProfileEditable && (
-                                    <div className="position-absolute bottom-0 start-50 translate-middle-x d-flex gap-2" style={{ marginBottom: '-15px' }}>
-                                        <label className="btn btn-primary btn-sm rounded-circle shadow d-flex align-items-center justify-content-center" style={{ width: '35px', height: '35px', cursor: 'pointer' }} title="Change Photo">
-                                            <FaCamera size={16} />
-                                            <input type="file" className="d-none" accept="image/*" onChange={handleImageChange} />
-                                        </label>
-
-                                        {previewImage && (
-                                            <button
-                                                className="btn btn-danger btn-sm rounded-circle shadow d-flex align-items-center justify-content-center"
-                                                style={{ width: '35px', height: '35px' }}
-                                                onClick={handleDeleteImage}
-                                                type="button"
-                                                title="Remove Photo"
-                                            >
-                                                <FaTrash size={14} />
-                                            </button>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-
-                            <h4 className="fw-bold mt-3">{user.name}</h4>
-                            <p className="text-muted mb-1">{user.position || user.designation || 'Employee'}</p>
-                            <span className="badge bg-primary text-uppercase px-3 py-2">{user.employeeType}</span>
-                            {!isProfileEditable && <div className="mt-3 text-muted small">Admin profile is fixed.</div>}
-
-                            <div className="mt-4 pt-3 border-top text-start">
-                                <div className="d-flex align-items-center mb-3">
-                                    <div className="bg-light p-2 rounded me-3 text-primary"><FaEnvelope /></div>
-                                    <div>
-                                        <small className="text-muted d-block">Email Address</small>
-                                        <span className="fw-medium">{user.email}</span>
-                                    </div>
-                                </div>
-                                <div className="d-flex align-items-center mb-3">
-                                    <div className="bg-light p-2 rounded me-3 text-primary"><FaPhone /></div>
-                                    <div>
-                                        <small className="text-muted d-block">Phone Number</small>
-                                        <span className="fw-medium">{formData.phone || 'Not provided'}</span>
-                                    </div>
-                                </div>
-                                <div className="d-flex align-items-center">
-                                    <div className="bg-light p-2 rounded me-3 text-primary"><FaIdCard /></div>
-                                    <div>
-                                        <small className="text-muted d-block">Employee ID</small>
-                                        <span className="fw-medium">{user.empId}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {/* Right Column: Detailed Forms */}
-                <div className="col-lg-8">
-                    {/* Personal & Employment Info */}
-                    <div className="card shadow-sm border-0 mb-4">
-
-                        <div className="card-header bg-white border-bottom py-3">
-                            <h5 className="mb-0 fw-bold text-primary"><FaUser className="me-2" /> Personal & Employment Details</h5>
-                        </div>
-                        <div className="card-body">
-                            <div className="row">
-                                <RenderField label="Full Name" name="name" value={formData.name} onChange={handleChange} isEditing={isEditing} />
-                                <RenderField label="Date of Birth" name="dob" value={formData.dob} type="date" onChange={handleChange} isEditing={isEditing} max={'9999-12-31'} />
-                                <RenderField label="Gender" name="gender" value={formData.gender} onChange={handleChange} isEditing={isEditing} />
-                                <RenderField label="Phone Number" name="phone" value={formData.phone} type="tel" onChange={handleChange} isEditing={isEditing} />
-                                <div className="col-md-6 mb-3">
-                                    <label className="form-label text-muted small text-uppercase fw-bold">Department</label>
-                                    <div className="fw-medium border-bottom pb-1">{user.department || 'General'}</div>
-                                </div>
-                                <div className="col-md-6 mb-3">
-                                    <label className="form-label text-muted small text-uppercase fw-bold">Joining Date</label>
-                                    <div className="fw-medium border-bottom pb-1">{user.joiningDate || 'N/A'}</div>
-                                </div>
-                                <div className="col-md-6 mb-3">
-                                    <label className="form-label text-muted small text-uppercase fw-bold">Salary (CTC)</label>
-                                    <div className="fw-medium border-bottom pb-1 text-success fw-bold">{user.salary ? `â‚¹${user.salary}` : 'Confidential'}</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Address Info */}
-                    <div className="card shadow-sm border-0">
-                        <div className="card-header bg-white border-bottom py-3">
-                            <h5 className="mb-0 fw-bold text-primary"><FaMapMarkerAlt className="me-2" /> Address Information</h5>
-                        </div>
-                        <div className="card-body">
-                            <div className="row">
-                                <RenderField label="Street Address" name="address.street" value={formData.address.street} onChange={handleChange} isEditing={isEditing} />
-                                <RenderField label="City" name="address.city" value={formData.address.city} onChange={handleChange} isEditing={isEditing} />
-                                <RenderField label="State / Province" name="address.state" value={formData.address.state} onChange={handleChange} isEditing={isEditing} />
-                                <RenderField label="Postal / Zip Code" name="address.postalCode" value={formData.address.postalCode} onChange={handleChange} isEditing={isEditing} />
-                                <RenderField label="Country" name="address.country" value={formData.address.country} onChange={handleChange} isEditing={isEditing} />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <ChangePasswordModal
-                isOpen={isPasswordModalOpen}
-                onClose={() => setIsPasswordModalOpen(false)}
-            />
-            <SuccessModal
-                isOpen={successModal.isOpen}
-                onClose={() => setSuccessModal(prev => ({ ...prev, isOpen: false }))}
-                title={successModal.title}
-                message={successModal.message}
-            />
+        <div className={`mb-3 col-md-${colSpan}`}>
+            <label className="pf-label">
+                {label}
+                {locked && <FaLock size={10} className="ms-1 pf-lock-icon" title="Read-only" />}
+            </label>
+            {isEditing && !locked ? (
+                <input
+                    type={type}
+                    className="pf-input"
+                    value={inputValue}
+                    placeholder={placeholder}
+                    onChange={(e) => onChange(e.target.value)}
+                />
+            ) : (
+                <div className="pf-value">{displayValue || <span className="pf-empty">Not provided</span>}</div>
+            )}
         </div>
     );
 };
 
+const SelectField = ({ label, value, onChange, isEditing, options, locked = false, colSpan = 6 }) => (
+    <div className={`mb-3 col-md-${colSpan}`}>
+        <label className="pf-label">
+            {label}
+            {locked && <FaLock size={10} className="ms-1 pf-lock-icon" title="Read-only" />}
+        </label>
+        {isEditing && !locked ? (
+            <select className="pf-input" value={value || ''} onChange={(e) => onChange(e.target.value)}>
+                <option value="">Select {label}</option>
+                {options.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+            </select>
+        ) : (
+            <div className="pf-value">{value || <span className="pf-empty">Not provided</span>}</div>
+        )}
+    </div>
+);
+
+const DateField = ({ label, value, onChange, isEditing, locked = false, colSpan = 6, maxDate }) => (
+    <div className={`mb-3 col-md-${colSpan}`}>
+        <label className="pf-label">
+            {label}
+            {locked && <FaLock size={10} className="ms-1 pf-lock-icon" title="Read-only" />}
+        </label>
+        {isEditing && !locked ? (
+            <CustomDatePicker value={value} onChange={onChange} maxDate={maxDate} />
+        ) : (
+            <div className="pf-value">
+                {value ? formatDMY(value) : <span className="pf-empty">Not provided</span>}
+            </div>
+        )}
+    </div>
+);
+
+function formatDMY(iso) {
+    if (!iso) return '';
+    const [y, m, d] = iso.split('-');
+    if (!y || !m || !d) return iso;
+    return `${d}-${m}-${y}`;
+}
+
+/** Collapsible bar with its own inline Edit / Save / Cancel controls */
+const AccordionSection = ({
+    id, title, icon: Icon, isOpen, onToggle,
+    isEditing, onEdit, onCancel, onSave, saving, children
+}) => (
+    <div className="pf-accordion-item">
+        <button type="button" className="pf-accordion-header" onClick={onToggle} aria-expanded={isOpen}>
+            <span className="pf-accordion-title">
+                <span className="pf-accordion-icon"><Icon /></span>
+                {title}
+            </span>
+            <span className="pf-accordion-header-right">
+                {isEditing && <span className="pf-editing-pill">Editing</span>}
+                <FaChevronDown className={`pf-chevron${isOpen ? ' pf-chevron-open' : ''}`} />
+            </span>
+        </button>
+
+        <div className={`pf-accordion-collapse${isOpen ? ' pf-open' : ''}`}>
+            <div className="pf-accordion-collapse-inner">
+                <div className="pf-accordion-body">
+                    <div className="pf-accordion-actions">
+                        {!isEditing ? (
+                            <button type="button" className="pf-btn pf-btn-ghost" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
+                                <FaEdit className="me-1" size={13} /> Edit
+                            </button>
+                        ) : (
+                            <div className="d-flex gap-2">
+                                <button type="button" className="pf-btn pf-btn-outline" onClick={onCancel} disabled={saving}>
+                                    <FaTimes className="me-1" size={13} /> Cancel
+                                </button>
+                                <button type="button" className="pf-btn pf-btn-solid" onClick={onSave} disabled={saving}>
+                                    {saving ? (
+                                        <span className="spinner-border spinner-border-sm me-2" />
+                                    ) : (
+                                        <FaSave className="me-1" size={13} />
+                                    )}
+                                    {saving ? 'Saving...' : 'Save Changes'}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                    <div className="row">
+                        {children}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+);
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
+const Profile = () => {
+    const { user, login, logout } = useAuth();
+
+    const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+    const [successModal, setSuccessModal] = useState({ isOpen: false, title: '', message: '' });
+
+    const [openSection, setOpenSection] = useState('personal');
+    const [editingSection, setEditingSection] = useState(null);
+    const [savingSection, setSavingSection] = useState(null);
+    const snapshotRef = useRef(null);
+
+    const [formData, setFormData] = useState(() => buildInitialFormData(null));
+    const [previewImage, setPreviewImage] = useState(null);
+    const [newImageFile, setNewImageFile] = useState(null);
+    const [deleteImageFlag, setDeleteImageFlag] = useState(false);
+    const [photoSaving, setPhotoSaving] = useState(false);
+    const fileInputRef = useRef(null);
+
+    const isProfileEditable = !(user?.role === 'admin' || user?.type === 'company' || user?.type === 'company_admin');
+
+    useEffect(() => {
+        if (user) {
+            setFormData(buildInitialFormData(user));
+            setPreviewImage(user.profileImage || null);
+        }
+    }, [user]);
+
+    function buildInitialFormData(u) {
+        const nameParts = (u?.name || '').trim().split(/\s+/).filter(Boolean);
+        return {
+            personal: {
+                firstName: u?.firstName || nameParts[0] || '',
+                middleName: u?.middleName || (nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : ''),
+                lastName: u?.lastName || (nameParts.length > 1 ? nameParts[nameParts.length - 1] : ''),
+                dob: u?.dob || '',
+                gender: u?.gender || '',
+                maritalStatus: u?.maritalStatus || '',
+                bloodGroup: u?.bloodGroup || '',
+                nationality: u?.nationality || '',
+                personalEmail: u?.personalEmail || u?.email || '',
+                personalPhone: u?.phone || ''
+            },
+            contact: {
+                primaryPhone: u?.phone || '',
+                alternatePhone: u?.alternatePhone || '',
+                personalEmail: u?.personalEmail || u?.email || '',
+                sameAsPermanent: !!u?.sameAsPermanent,
+                currentAddress: {
+                    line1: u?.address?.street || '',
+                    city: u?.address?.city || '',
+                    state: u?.address?.state || '',
+                    country: u?.address?.country || '',
+                    pincode: u?.address?.postalCode || ''
+                },
+                permanentAddress: {
+                    line1: u?.permanentAddress?.street || '',
+                    city: u?.permanentAddress?.city || '',
+                    state: u?.permanentAddress?.state || '',
+                    country: u?.permanentAddress?.country || '',
+                    pincode: u?.permanentAddress?.postalCode || ''
+                }
+            },
+            employment: {
+                employeeId: u?.empId || '',
+                employeeType: u?.employeeType || '',
+                employmentStatus: u?.status || 'Active',
+                doj: u?.joiningDate || '',
+                department: u?.department || '',
+                designation: u?.position || u?.designation || '',
+                role: u?.role || '',
+                reportingManager: u?.reportingManager || '',
+                workLocation: u?.workLocation || '',
+                branch: u?.branch || '',
+                employmentLevel: u?.employmentLevel || '',
+                shift: formatShiftValue(u?.shift),
+                workMode: u?.workMode || ''
+            },
+            emergencyContacts: (u?.emergencyContacts && u.emergencyContacts.length > 0)
+                ? deepClone(u.emergencyContacts)
+                : [emptyEmergencyContact()],
+            education: (u?.education && u.education.length > 0)
+                ? deepClone(u.education)
+                : [emptyEducation()]
+        };
+    }
+
+    // ---- generic field setters --------------------------------------------
+    const setField = (section, field, value) =>
+        setFormData((prev) => ({ ...prev, [section]: { ...prev[section], [field]: value } }));
+
+    const setNestedField = (section, group, field, value) =>
+        setFormData((prev) => ({
+            ...prev,
+            [section]: { ...prev[section], [group]: { ...prev[section][group], [field]: value } }
+        }));
+
+    const setArrayField = (section, index, field, value) =>
+        setFormData((prev) => {
+            const arr = [...prev[section]];
+            arr[index] = { ...arr[index], [field]: value };
+            return { ...prev, [section]: arr };
+        });
+
+    const addArrayItem = (section, factory) =>
+        setFormData((prev) => ({ ...prev, [section]: [...prev[section], factory()] }));
+
+    const removeArrayItem = (section, index) =>
+        setFormData((prev) => {
+            const arr = prev[section].filter((_, i) => i !== index);
+            return { ...prev, [section]: arr.length > 0 ? arr : prev[section] };
+        });
+
+    const toggleSameAsPermanent = (checked) => {
+        setFormData((prev) => ({
+            ...prev,
+            contact: {
+                ...prev.contact,
+                sameAsPermanent: checked,
+                currentAddress: checked ? deepClone(prev.contact.permanentAddress) : prev.contact.currentAddress
+            }
+        }));
+    };
+
+    // ---- accordion / edit lifecycle ---------------------------------------
+    const handleToggleSection = (key) => {
+        if (editingSection && editingSection !== key) return; // finish current edit first
+        setOpenSection((prev) => (prev === key ? null : key));
+    };
+
+    const handleEdit = (key) => {
+        snapshotRef.current = deepClone(formData[key]);
+        setEditingSection(key);
+        setOpenSection(key);
+    };
+
+    const handleCancel = (key) => {
+        if (snapshotRef.current) {
+            setFormData((prev) => ({ ...prev, [key]: snapshotRef.current }));
+        }
+        setEditingSection(null);
+        snapshotRef.current = null;
+    };
+
+    const buildEndpoint = () => {
+        if (!user) return '';
+        if (user.type === 'hr') return `${API_BASE}/companies/${user.companyId}/hr/${user.id}`;
+        if (user.type === 'company' || user.role === 'admin') return `${API_BASE}/companies/${user.companyId}/admin`;
+        return `${API_BASE}/companies/${user.companyId}/employees/${user.id}`;
+    };
+
+    const persist = async (extraPayload = {}) => {
+        const endpoint = buildEndpoint();
+        const payload = {
+            name: [formData.personal.firstName, formData.personal.middleName, formData.personal.lastName].filter(Boolean).join(' '),
+            firstName: formData.personal.firstName,
+            middleName: formData.personal.middleName,
+            lastName: formData.personal.lastName,
+            dob: formData.personal.dob,
+            gender: formData.personal.gender,
+            maritalStatus: formData.personal.maritalStatus,
+            bloodGroup: formData.personal.bloodGroup,
+            nationality: formData.personal.nationality,
+            personalEmail: formData.personal.personalEmail,
+            phone: formData.contact.primaryPhone,
+            alternatePhone: formData.contact.alternatePhone,
+            sameAsPermanent: formData.contact.sameAsPermanent,
+            address: {
+                street: formData.contact.currentAddress.line1,
+                city: formData.contact.currentAddress.city,
+                state: formData.contact.currentAddress.state,
+                country: formData.contact.currentAddress.country,
+                postalCode: formData.contact.currentAddress.pincode
+            },
+            permanentAddress: {
+                street: formData.contact.permanentAddress.line1,
+                city: formData.contact.permanentAddress.city,
+                state: formData.contact.permanentAddress.state,
+                country: formData.contact.permanentAddress.country,
+                postalCode: formData.contact.permanentAddress.pincode
+            },
+            employeeType: formData.employment.employeeType,
+            workLocation: formData.employment.workLocation,
+            branch: formData.employment.branch,
+            employmentLevel: formData.employment.employmentLevel,
+            shift: formData.employment.shift,
+            workMode: formData.employment.workMode,
+            emergencyContacts: formData.emergencyContacts,
+            education: formData.education,
+            ...extraPayload
+        };
+
+        const response = await fetch(endpoint, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) throw new Error('Failed to update profile');
+        const updated = await response.json().catch(() => ({}));
+        login({ ...user, ...updated, ...payload, profileImage: extraPayload.profileImage !== undefined ? extraPayload.profileImage : user.profileImage });
+    };
+
+    const handleSaveSection = async (key, label) => {
+        setSavingSection(key);
+        try {
+            await persist();
+            setEditingSection(null);
+            snapshotRef.current = null;
+            setSuccessModal({ isOpen: true, title: 'Saved!', message: `${label} updated successfully.` });
+        } catch (err) {
+            console.error(err);
+            alert('Failed to save changes. ' + err.message);
+        } finally {
+            setSavingSection(null);
+        }
+    };
+
+    // ---- photo handling (kept consistent with the app's shared upload UX) -
+    const compressImage = (file) => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX = 500;
+                let { width, height } = img;
+                if (width > height) {
+                    if (width > MAX) { height *= MAX / width; width = MAX; }
+                } else if (height > MAX) { width *= MAX / height; height = MAX; }
+                canvas.width = width; canvas.height = height;
+                canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', 0.7));
+            };
+            img.onerror = () => reject(new Error('Image load failed'));
+        };
+        reader.onerror = reject;
+    });
+
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setPreviewImage(URL.createObjectURL(file));
+        setNewImageFile(file);
+        setDeleteImageFlag(false);
+    };
+
+    const handleDeleteImage = () => {
+        if (!window.confirm('Remove your profile photo?')) return;
+        setPreviewImage(null);
+        setNewImageFile(null);
+        setDeleteImageFlag(true);
+    };
+
+    const handleCancelPhoto = () => {
+        setPreviewImage(user?.profileImage || null);
+        setNewImageFile(null);
+        setDeleteImageFlag(false);
+    };
+
+    const handleSavePhoto = async () => {
+        setPhotoSaving(true);
+        try {
+            let imageUrl = user?.profileImage || null;
+            if (newImageFile) {
+                const compressed = await compressImage(newImageFile);
+                try {
+                    const fileName = `profile_${user.id}_${Date.now()}.jpg`;
+                    const ref = storageRef(storage, `profile_images/${fileName}`);
+                    const { uploadString } = await import('firebase/storage');
+                    const uploadPromise = uploadString(ref, compressed, 'data_url').then((s) => getDownloadURL(s.ref));
+                    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000));
+                    imageUrl = await Promise.race([uploadPromise, timeoutPromise]);
+                } catch (err) {
+                    console.warn('Storage upload failed, using compressed fallback', err);
+                    imageUrl = compressed;
+                }
+            } else if (deleteImageFlag) {
+                imageUrl = null;
+            }
+            await persist({ profileImage: imageUrl });
+            setNewImageFile(null);
+            setDeleteImageFlag(false);
+            setSuccessModal({ isOpen: true, title: 'Saved!', message: 'Profile photo updated.' });
+        } catch (err) {
+            console.error(err);
+            alert('Failed to update photo. ' + err.message);
+        } finally {
+            setPhotoSaving(false);
+        }
+    };
+
+    const photoDirty = !!newImageFile || deleteImageFlag;
+
+    if (!user) return <div className="p-5 text-center">Loading Profile...</div>;
+
+    const fullName = [formData.personal.firstName, formData.personal.middleName, formData.personal.lastName].filter(Boolean).join(' ') || user.name;
+
+    const sections = [
+        { key: 'personal', title: 'Personal Information', icon: FaUser },
+        { key: 'contact', title: 'Contact Information', icon: FaMapMarkerAlt },
+        { key: 'employment', title: 'Employment Information', icon: FaBriefcase },
+        { key: 'emergency', title: 'Emergency Contact', icon: FaUserFriends },
+        { key: 'education', title: 'Education Details', icon: FaGraduationCap }
+    ];
+
+    return (
+        <div className="pf-page">
+            {/* Header */}
+            <div className="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+                <div>
+                    <h2 className="pf-page-title">My Profile</h2>
+                    <p className="pf-page-subtitle">Manage your personal information</p>
+                </div>
+                <div className="d-flex gap-2">
+                    <button className="pf-btn pf-btn-outline" onClick={() => setIsPasswordModalOpen(true)}>
+                        <FaKey className="me-2" /> Change Password
+                    </button>
+                    <button className="pf-btn pf-btn-danger" onClick={() => logout()}>
+                        <FaSignOutAlt className="me-2" /> Sign Out
+                    </button>
+                </div>
+            </div>
+
+            {/* Identity card */}
+            <div className="pf-card pf-identity-card mb-4">
+                <div className="pf-identity-photo-wrap">
+                    <div className="pf-avatar">
+                        {previewImage ? (
+                            <img src={previewImage} alt="Profile" />
+                        ) : (
+                            <span>{fullName?.charAt(0)?.toUpperCase() || '?'}</span>
+                        )}
+                    </div>
+                    {isProfileEditable && (
+                        <div className="pf-avatar-actions">
+                            <label className="pf-avatar-btn" title="Change photo">
+                                <FaCamera size={14} />
+                                <input ref={fileInputRef} type="file" accept="image/*" className="d-none" onChange={handleImageChange} />
+                            </label>
+                            {previewImage && (
+                                <button type="button" className="pf-avatar-btn pf-avatar-btn-danger" title="Remove photo" onClick={handleDeleteImage}>
+                                    <FaTrash size={12} />
+                                </button>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                <div className="pf-identity-info">
+                    <h3 className="pf-identity-name">{fullName}</h3>
+                    <div className="pf-identity-meta">
+                        <span className="pf-chip"><FaIdCard size={12} className="me-1" /> {formData.employment.employeeId || 'N/A'}</span>
+                        <span className="pf-chip">{formData.employment.designation || 'Employee'}</span>
+                        <span className="pf-chip pf-chip-accent">{formData.employment.department || 'General'}</span>
+                    </div>
+                </div>
+
+                {photoDirty && (
+                    <div className="pf-photo-save-bar">
+                        <button type="button" className="pf-btn pf-btn-outline" onClick={handleCancelPhoto} disabled={photoSaving}>
+                            <FaTimes className="me-1" size={12} /> Cancel
+                        </button>
+                        <button type="button" className="pf-btn pf-btn-solid" onClick={handleSavePhoto} disabled={photoSaving}>
+                            {photoSaving ? <span className="spinner-border spinner-border-sm me-2" /> : <FaCheck className="me-1" size={12} />}
+                            {photoSaving ? 'Saving...' : 'Save Photo'}
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            {/* Accordion sections */}
+            <div className="pf-accordion">
+                {sections.map(({ key, title, icon }) => (
+                    <AccordionSection
+                        key={key}
+                        id={key}
+                        title={title}
+                        icon={icon}
+                        isOpen={openSection === key}
+                        onToggle={() => handleToggleSection(key)}
+                        isEditing={editingSection === key}
+                        onEdit={() => handleEdit(key)}
+                        onCancel={() => handleCancel(key)}
+                        onSave={() => handleSaveSection(key, title)}
+                        saving={savingSection === key}
+                    >
+                        {key === 'personal' && (
+                            <PersonalFields data={formData.personal} isEditing={editingSection === 'personal'}
+                                setField={(f, v) => setField('personal', f, v)} />
+                        )}
+                        {key === 'contact' && (
+                            <ContactFields data={formData.contact} isEditing={editingSection === 'contact'}
+                                setField={(f, v) => setField('contact', f, v)}
+                                setNestedField={(g, f, v) => setNestedField('contact', g, f, v)}
+                                toggleSameAsPermanent={toggleSameAsPermanent} />
+                        )}
+                        {key === 'employment' && (
+                            <EmploymentFields data={formData.employment} isEditing={editingSection === 'employment'}
+                                setField={(f, v) => setField('employment', f, v)} />
+                        )}
+                        {key === 'emergency' && (
+                            <EmergencyFields list={formData.emergencyContacts} isEditing={editingSection === 'emergency'}
+                                setArrayField={(i, f, v) => setArrayField('emergencyContacts', i, f, v)}
+                                addItem={() => addArrayItem('emergencyContacts', emptyEmergencyContact)}
+                                removeItem={(i) => removeArrayItem('emergencyContacts', i)} />
+                        )}
+                        {key === 'education' && (
+                            <EducationFields list={formData.education} isEditing={editingSection === 'education'}
+                                setArrayField={(i, f, v) => setArrayField('education', i, f, v)}
+                                addItem={() => addArrayItem('education', emptyEducation)}
+                                removeItem={(i) => removeArrayItem('education', i)} />
+                        )}
+                    </AccordionSection>
+                ))}
+            </div>
+
+            <ChangePasswordModal isOpen={isPasswordModalOpen} onClose={() => setIsPasswordModalOpen(false)} />
+            <SuccessModal
+                isOpen={successModal.isOpen}
+                onClose={() => setSuccessModal((prev) => ({ ...prev, isOpen: false }))}
+                title={successModal.title}
+                message={successModal.message}
+            />
+
+            <style>{`
+                .pf-page {
+                    padding: 1.5rem;
+                    min-height: 100vh;
+                    background: var(--bg-main, #f5f6f8);
+                    color: var(--text-main, #212529);
+                }
+                .pf-page-title { font-weight: 700; margin-bottom: 2px; color: var(--text-main, #212529); }
+                .pf-page-subtitle { color: var(--text-muted, #6c757d); margin: 0; }
+
+                .pf-card {
+                    background: var(--card-bg, #fff);
+                    border: 1px solid var(--border-color, #e9ecef);
+                    border-radius: 16px;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+                }
+
+                /* ---- Identity card ---- */
+                .pf-identity-card {
+                    display: flex;
+                    align-items: center;
+                    gap: 1.5rem;
+                    padding: 1.5rem;
+                    flex-wrap: wrap;
+                    position: relative;
+                }
+                .pf-identity-photo-wrap { position: relative; flex-shrink: 0; }
+                .pf-avatar {
+                    width: 96px;
+                    height: 96px;
+                    border-radius: 50%;
+                    overflow: hidden;
+                    background: var(--accent-soft, rgba(13,110,253,0.15));
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 2.2rem;
+                    font-weight: 700;
+                    color: var(--accent, #0d6efd);
+                    border: 3px solid var(--card-bg, #fff);
+                    box-shadow: 0 0 0 1px var(--border-color, #e9ecef);
+                }
+                .pf-avatar img { width: 100%; height: 100%; object-fit: cover; }
+                .pf-avatar-actions {
+                    position: absolute;
+                    bottom: -4px;
+                    right: -4px;
+                    display: flex;
+                    gap: 4px;
+                }
+                .pf-avatar-btn {
+                    width: 30px; height: 30px;
+                    display: flex; align-items: center; justify-content: center;
+                    border-radius: 50%;
+                    background: var(--accent, #0d6efd);
+                    color: #fff;
+                    cursor: pointer;
+                    border: 2px solid var(--card-bg, #fff);
+                    transition: transform 120ms ease;
+                }
+                .pf-avatar-btn:hover { transform: scale(1.08); }
+                .pf-avatar-btn-danger { background: #dc3545; }
+
+                .pf-identity-info { flex: 1; min-width: 200px; }
+                .pf-identity-name { font-weight: 700; margin-bottom: 8px; color: var(--text-main, #212529); }
+                .pf-identity-meta { display: flex; gap: 8px; flex-wrap: wrap; }
+                .pf-chip {
+                    display: inline-flex; align-items: center;
+                    background: var(--surface-soft, #f1f3f5);
+                    color: var(--text-main, #212529);
+                    padding: 4px 12px;
+                    border-radius: 999px;
+                    font-size: 0.8rem;
+                    font-weight: 500;
+                }
+                .pf-chip-accent { background: var(--accent-soft, rgba(13,110,253,0.15)); color: var(--accent, #0d6efd); font-weight: 700; }
+
+                .pf-photo-save-bar {
+                    display: flex;
+                    gap: 8px;
+                    width: 100%;
+                    justify-content: flex-end;
+                    padding-top: 1rem;
+                    border-top: 1px dashed var(--border-color, #e9ecef);
+                    animation: pf-fade-in 160ms ease;
+                }
+
+                /* ---- Accordion ---- */
+                .pf-accordion { display: flex; flex-direction: column; gap: 12px; }
+                .pf-accordion-item {
+                    background: var(--card-bg, #fff);
+                    border: 1px solid var(--border-color, #e9ecef);
+                    border-radius: 14px;
+                    overflow: hidden;
+                }
+                .pf-accordion-header {
+                    width: 100%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    padding: 1rem 1.25rem;
+                    background: transparent;
+                    border: none;
+                    cursor: pointer;
+                    text-align: left;
+                }
+                .pf-accordion-header:hover { background: var(--surface-soft, #f8f9fa); }
+                .pf-accordion-title {
+                    display: flex; align-items: center; gap: 10px;
+                    font-weight: 700;
+                    font-size: 1rem;
+                    color: var(--text-main, #212529);
+                }
+                .pf-accordion-icon {
+                    width: 32px; height: 32px;
+                    display: flex; align-items: center; justify-content: center;
+                    background: var(--accent-soft, rgba(13,110,253,0.15));
+                    color: var(--accent, #0d6efd);
+                    border-radius: 9px;
+                }
+                .pf-accordion-header-right { display: flex; align-items: center; gap: 10px; }
+                .pf-editing-pill {
+                    font-size: 0.7rem;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: 0.03em;
+                    background: var(--accent-soft, rgba(13,110,253,0.15));
+                    color: var(--accent, #0d6efd);
+                    padding: 3px 10px;
+                    border-radius: 999px;
+                }
+                .pf-chevron { color: var(--text-muted, #6c757d); transition: transform 220ms ease; }
+                .pf-chevron-open { transform: rotate(180deg); }
+
+                .pf-accordion-collapse {
+                    display: grid;
+                    grid-template-rows: 0fr;
+                    transition: grid-template-rows 260ms ease;
+                }
+                .pf-accordion-collapse.pf-open { grid-template-rows: 1fr; }
+                .pf-accordion-collapse-inner { overflow: hidden; }
+                .pf-accordion-body {
+                    padding: 0.25rem 1.25rem 1.25rem;
+                    border-top: 1px solid var(--border-color, #eef0f2);
+                }
+                .pf-accordion-actions {
+                    display: flex;
+                    justify-content: flex-end;
+                    padding: 1rem 0 0.5rem;
+                }
+
+                /* ---- Fields ---- */
+                .pf-label {
+                    display: block;
+                    font-size: 0.72rem;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: 0.04em;
+                    color: var(--text-muted, #6c757d);
+                    margin-bottom: 6px;
+                }
+                .pf-lock-icon { color: var(--text-muted, #adb5bd); vertical-align: middle; }
+                .pf-value {
+                    font-weight: 500;
+                    color: var(--text-main, #212529);
+                    padding-bottom: 6px;
+                    border-bottom: 1px solid var(--border-color, #eef0f2);
+                    min-height: 1.6em;
+                }
+                .pf-empty { color: var(--text-muted, #adb5bd); font-weight: 400; font-style: italic; }
+                .pf-input {
+                    width: 100%;
+                    padding: 0.5rem 0.75rem;
+                    border-radius: 8px;
+                    border: 1px solid var(--border-color, #ced4da);
+                    background: var(--input-bg, #fff);
+                    color: var(--text-main, #212529);
+                    font-size: 0.95rem;
+                    transition: border-color 150ms ease, box-shadow 150ms ease;
+                }
+                .pf-input:focus {
+                    outline: none;
+                    border-color: var(--accent, #0d6efd);
+                    box-shadow: 0 0 0 3px var(--accent-soft, rgba(13,110,253,0.15));
+                }
+                .pf-input:disabled { background: var(--surface-soft, #f1f3f5); cursor: not-allowed; }
+
+                .pf-subheading {
+                    font-size: 0.85rem;
+                    font-weight: 700;
+                    color: var(--accent, #0d6efd);
+                    margin: 0.5rem 0 0.75rem;
+                    padding-top: 0.5rem;
+                    border-top: 1px dashed var(--border-color, #e9ecef);
+                }
+                .pf-subheading:first-child { border-top: none; padding-top: 0; }
+
+                .pf-checkbox-row {
+                    display: flex; align-items: center; gap: 8px;
+                    margin-bottom: 1rem;
+                    font-size: 0.85rem;
+                    color: var(--text-main, #212529);
+                }
+
+                /* ---- Repeatable cards (emergency contacts / education) ---- */
+                .pf-repeat-card {
+                    background: var(--surface-soft, #f8f9fa);
+                    border: 1px solid var(--border-color, #eef0f2);
+                    border-radius: 12px;
+                    padding: 1rem;
+                    margin-bottom: 1rem;
+                    width: 100%;
+                }
+                .pf-repeat-card-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 0.75rem;
+                }
+                .pf-repeat-card-title { font-weight: 700; font-size: 0.85rem; color: var(--text-main, #212529); }
+                .pf-remove-btn {
+                    border: none; background: transparent; color: #dc3545;
+                    font-size: 0.78rem; font-weight: 600; cursor: pointer;
+                    display: flex; align-items: center; gap: 4px;
+                }
+                .pf-remove-btn:hover { text-decoration: underline; }
+                .pf-add-btn {
+                    border: 1px dashed var(--accent, #0d6efd);
+                    background: transparent;
+                    color: var(--accent, #0d6efd);
+                    border-radius: 10px;
+                    padding: 0.6rem;
+                    width: 100%;
+                    font-weight: 600;
+                    font-size: 0.85rem;
+                    display: flex; align-items: center; justify-content: center; gap: 6px;
+                    cursor: pointer;
+                    transition: background 120ms ease;
+                }
+                .pf-add-btn:hover { background: var(--accent-soft, rgba(13,110,253,0.15)); }
+
+                .pf-education-view {
+                    display: flex;
+                    flex-direction: column;
+                    padding: 0.9rem 1rem;
+                    background: var(--surface-soft, #f8f9fa);
+                    border-radius: 12px;
+                    margin-bottom: 0.75rem;
+                    border-left: 3px solid var(--accent, #0d6efd);
+                }
+                .pf-education-view strong { color: var(--text-main, #212529); }
+                .pf-education-view span { color: var(--text-muted, #6c757d); font-size: 0.85rem; }
+
+                /* ---- Buttons ---- */
+                .pf-btn {
+                    display: inline-flex; align-items: center; justify-content: center;
+                    border-radius: 999px;
+                    padding: 0.5rem 1.1rem;
+                    font-weight: 600;
+                    font-size: 0.85rem;
+                    border: 1px solid transparent;
+                    cursor: pointer;
+                    transition: transform 120ms ease, background 120ms ease, box-shadow 120ms ease;
+                }
+                .pf-btn:active { transform: scale(0.97); }
+                .pf-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+                .pf-btn-solid { background: var(--accent, #0d6efd); color: #fff; }
+                .pf-btn-solid:hover:not(:disabled) { box-shadow: 0 4px 12px var(--accent-soft, rgba(13,110,253,0.35)); }
+                .pf-btn-outline { background: transparent; color: var(--text-main, #212529); border-color: var(--border-color, #ced4da); }
+                .pf-btn-outline:hover:not(:disabled) { background: var(--surface-soft, #f1f3f5); }
+                .pf-btn-ghost { background: var(--accent-soft, rgba(13,110,253,0.15)); color: var(--accent, #0d6efd); }
+                .pf-btn-ghost:hover { background: var(--accent-soft, rgba(13,110,253,0.28)); }
+                .pf-btn-danger { background: #dc3545; color: #fff; }
+                .pf-btn-danger:hover { box-shadow: 0 4px 12px rgba(220,53,69,0.35); }
+
+                @keyframes pf-fade-in {
+                    from { opacity: 0; transform: translateY(-4px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+
+                @media (max-width: 576px) {
+                    .pf-identity-card { flex-direction: column; text-align: center; }
+                    .pf-identity-meta { justify-content: center; }
+                    .pf-accordion-header { padding: 0.85rem 1rem; }
+                }
+            `}</style>
+        </div>
+    );
+};
+
+// ---------------------------------------------------------------------------
+// Section field groups
+// ---------------------------------------------------------------------------
+
+const PersonalFields = ({ data, isEditing, setField }) => (
+    <>
+        <TextField label="First Name" value={data.firstName} isEditing={isEditing} onChange={(v) => setField('firstName', v)} />
+        <TextField label="Middle Name" value={data.middleName} isEditing={isEditing} onChange={(v) => setField('middleName', v)} />
+        <TextField label="Last Name" value={data.lastName} isEditing={isEditing} onChange={(v) => setField('lastName', v)} />
+        <DateField label="Date of Birth" value={data.dob} isEditing={isEditing} onChange={(v) => setField('dob', v)} maxDate={new Date()} />
+        <SelectField label="Gender" value={data.gender} isEditing={isEditing} onChange={(v) => setField('gender', v)} options={GENDER_OPTIONS} />
+        <SelectField label="Marital Status" value={data.maritalStatus} isEditing={isEditing} onChange={(v) => setField('maritalStatus', v)} options={MARITAL_OPTIONS} />
+        <SelectField label="Blood Group" value={data.bloodGroup} isEditing={isEditing} onChange={(v) => setField('bloodGroup', v)} options={BLOOD_GROUPS} />
+        <TextField label="Nationality" value={data.nationality} isEditing={isEditing} onChange={(v) => setField('nationality', v)} />
+        <TextField label="Personal Email" type="email" value={data.personalEmail} isEditing={isEditing} onChange={(v) => setField('personalEmail', v)} />
+        <TextField label="Personal Phone" type="tel" value={data.personalPhone} isEditing={isEditing} onChange={(v) => setField('personalPhone', v)} />
+    </>
+);
+
+const AddressBlock = ({ label, address, isEditing, onChange, disabled }) => (
+    <>
+        <div className="pf-subheading col-12">{label}</div>
+        <TextField label="Address Line" value={address.line1} isEditing={isEditing && !disabled} onChange={(v) => onChange('line1', v)} locked={disabled} colSpan={12} />
+        <TextField label="City" value={address.city} isEditing={isEditing && !disabled} onChange={(v) => onChange('city', v)} locked={disabled} colSpan={3} />
+        <TextField label="State" value={address.state} isEditing={isEditing && !disabled} onChange={(v) => onChange('state', v)} locked={disabled} colSpan={3} />
+        <TextField label="Country" value={address.country} isEditing={isEditing && !disabled} onChange={(v) => onChange('country', v)} locked={disabled} colSpan={3} />
+        <TextField label="PIN Code" value={address.pincode} isEditing={isEditing && !disabled} onChange={(v) => onChange('pincode', v)} locked={disabled} colSpan={3} />
+    </>
+);
+
+const ContactFields = ({ data, isEditing, setField, setNestedField, toggleSameAsPermanent }) => (
+    <>
+        <TextField label="Primary Phone" type="tel" value={data.primaryPhone} isEditing={isEditing} onChange={(v) => setField('primaryPhone', v)} />
+        <TextField label="Alternate Phone" type="tel" value={data.alternatePhone} isEditing={isEditing} onChange={(v) => setField('alternatePhone', v)} />
+        <TextField label="Personal Email" type="email" value={data.personalEmail} isEditing={isEditing} onChange={(v) => setField('personalEmail', v)} colSpan={12} />
+
+        <AddressBlock
+            label="Permanent Address"
+            address={data.permanentAddress}
+            isEditing={isEditing}
+            onChange={(f, v) => setNestedField('permanentAddress', f, v)}
+        />
+
+        <div className="col-12">
+            <label className="pf-checkbox-row">
+                <input
+                    type="checkbox"
+                    checked={data.sameAsPermanent}
+                    disabled={!isEditing}
+                    onChange={(e) => toggleSameAsPermanent(e.target.checked)}
+                />
+                Current address is the same as permanent address
+            </label>
+        </div>
+
+        <AddressBlock
+            label="Current Address"
+            address={data.currentAddress}
+            isEditing={isEditing}
+            onChange={(f, v) => setNestedField('currentAddress', f, v)}
+            disabled={data.sameAsPermanent}
+        />
+    </>
+);
+
+const EmploymentFields = ({ data, isEditing, setField }) => (
+    <>
+        <TextField label="Employee ID" value={data.employeeId} isEditing={isEditing} locked onChange={() => {}} />
+        <SelectField label="Employee Type" value={data.employeeType} isEditing={isEditing} onChange={(v) => setField('employeeType', v)} options={EMPLOYEE_TYPE_OPTIONS} />
+        <TextField label="Employment Status" value={data.employmentStatus} isEditing={isEditing} locked onChange={() => {}} />
+        <DateField label="Date of Joining" value={data.doj} isEditing={isEditing} locked onChange={() => {}} />
+        <TextField label="Department" value={data.department} isEditing={isEditing} locked onChange={() => {}} />
+        <TextField label="Designation" value={data.designation} isEditing={isEditing} locked onChange={() => {}} />
+        <TextField label="Role" value={data.role} isEditing={isEditing} onChange={(v) => setField('role', v)} />
+        <TextField label="Reporting Manager" value={data.reportingManager} isEditing={isEditing} locked onChange={() => {}} />
+        <TextField label="Work Location" value={data.workLocation} isEditing={isEditing} onChange={(v) => setField('workLocation', v)} />
+        <TextField label="Branch" value={data.branch} isEditing={isEditing} onChange={(v) => setField('branch', v)} />
+        <TextField label="Employment Level" value={data.employmentLevel} isEditing={isEditing} onChange={(v) => setField('employmentLevel', v)} />
+        <TextField label="Shift" value={data.shift} isEditing={isEditing} onChange={(v) => setField('shift', v)} />
+        <SelectField label="Work Mode" value={data.workMode} isEditing={isEditing} onChange={(v) => setField('workMode', v)} options={WORK_MODE_OPTIONS} />
+    </>
+);
+
+const EmergencyFields = ({ list, isEditing, setArrayField, addItem, removeItem }) => (
+    <div className="col-12">
+        {list.map((contact, idx) => (
+            <div className="pf-repeat-card" key={contact.id || idx}>
+                <div className="pf-repeat-card-header">
+                    <span className="pf-repeat-card-title">Emergency Contact {idx + 1}</span>
+                    {isEditing && list.length > 1 && (
+                        <button type="button" className="pf-remove-btn" onClick={() => removeItem(idx)}>
+                            <FaTrash size={11} /> Remove
+                        </button>
+                    )}
+                </div>
+                <div className="row">
+                    <TextField label="Contact Name" value={contact.name} isEditing={isEditing} onChange={(v) => setArrayField(idx, 'name', v)} />
+                    <SelectField label="Relationship" value={contact.relationship} isEditing={isEditing} onChange={(v) => setArrayField(idx, 'relationship', v)} options={RELATIONSHIP_OPTIONS} />
+                    <TextField label="Primary Phone" type="tel" value={contact.primaryPhone} isEditing={isEditing} onChange={(v) => setArrayField(idx, 'primaryPhone', v)} />
+                    <TextField label="Alternate Phone" type="tel" value={contact.alternatePhone} isEditing={isEditing} onChange={(v) => setArrayField(idx, 'alternatePhone', v)} />
+                    <TextField label="Email" type="email" value={contact.email} isEditing={isEditing} onChange={(v) => setArrayField(idx, 'email', v)} />
+                    <TextField label="Address" value={contact.address} isEditing={isEditing} onChange={(v) => setArrayField(idx, 'address', v)} />
+                </div>
+            </div>
+        ))}
+        {isEditing && (
+            <button type="button" className="pf-add-btn" onClick={addItem}>
+                <FaPlus size={12} /> Add Emergency Contact
+            </button>
+        )}
+    </div>
+);
+
+const EducationFields = ({ list, isEditing, setArrayField, addItem, removeItem }) => (
+    <div className="col-12">
+        {list.map((edu, idx) =>
+            isEditing ? (
+                <div className="pf-repeat-card" key={edu.id || idx}>
+                    <div className="pf-repeat-card-header">
+                        <span className="pf-repeat-card-title">Qualification {idx + 1}</span>
+                        {list.length > 1 && (
+                            <button type="button" className="pf-remove-btn" onClick={() => removeItem(idx)}>
+                                <FaTrash size={11} /> Remove
+                            </button>
+                        )}
+                    </div>
+                    <div className="row">
+                        <TextField label="Highest Qualification" value={edu.qualification} isEditing onChange={(v) => setArrayField(idx, 'qualification', v)} />
+                        <TextField label="Degree" value={edu.degree} isEditing onChange={(v) => setArrayField(idx, 'degree', v)} />
+                        <TextField label="Specialization" value={edu.specialization} isEditing onChange={(v) => setArrayField(idx, 'specialization', v)} />
+                        <TextField label="Institution" value={edu.institution} isEditing onChange={(v) => setArrayField(idx, 'institution', v)} />
+                        <TextField label="Year of Passing" value={edu.yearOfPassing} isEditing onChange={(v) => setArrayField(idx, 'yearOfPassing', v)} colSpan={3} />
+                        <TextField label="Percentage / CGPA" value={edu.percentage} isEditing onChange={(v) => setArrayField(idx, 'percentage', v)} colSpan={3} />
+                    </div>
+                </div>
+            ) : (
+                <div className="pf-education-view" key={edu.id || idx}>
+                    <strong>{edu.qualification || 'Qualification not set'}{edu.specialization ? ` – ${edu.specialization}` : ''}</strong>
+                    <span>{edu.degree}{edu.degree && edu.institution ? ' · ' : ''}{edu.institution}</span>
+                    <span>{edu.yearOfPassing}{edu.yearOfPassing && edu.percentage ? ' · ' : ''}{edu.percentage ? `CGPA/% : ${edu.percentage}` : ''}</span>
+                </div>
+            )
+        )}
+        {isEditing && (
+            <button type="button" className="pf-add-btn" onClick={addItem}>
+                <FaPlus size={12} /> Add Education
+            </button>
+        )}
+    </div>
+);
+
 export default Profile;
-
-
-

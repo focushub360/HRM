@@ -3,6 +3,10 @@
 
 :root {
   --auth-bg: #f7f9fc;
+  --auth-bg-gradient-start: #f7f9fc;
+  --auth-bg-gradient-end: #eef3f8;
+  --auth-hero-gradient-start: #eef2ff;
+  --auth-hero-gradient-end: #f8fbff;
   --auth-surface: #ffffff;
   --auth-surface-soft: #f8fbff;
   --auth-text: #172033;
@@ -10,6 +14,23 @@
   --auth-border: #dbe5f0;
   --auth-primary: #4f46e5;
   --auth-primary-hover: #4338ca;
+  --auth-input-bg: #ffffff;
+  --auth-placeholder: #94a3b8;
+}
+
+[data-theme='dark'] {
+  --auth-bg: #0f172a;
+  --auth-bg-gradient-start: #0f172a;
+  --auth-bg-gradient-end: #111827;
+  --auth-hero-gradient-start: #1e1b4b;
+  --auth-hero-gradient-end: #111827;
+  --auth-surface: #111827;
+  --auth-surface-soft: #0b1220;
+  --auth-text: #f8fafc;
+  --auth-muted: #cbd5e1;
+  --auth-border: #243244;
+  --auth-input-bg: #0f172a;
+  --auth-placeholder: #64748b;
 }
 
 .login-page {
@@ -23,7 +44,7 @@
   align-items: center;
   overflow: hidden !important;
   box-sizing: border-box;
-  background: linear-gradient(180deg, #f7f9fc 0%, #eef3f8 100%);
+  background: linear-gradient(180deg, var(--auth-bg-gradient-start) 0%, var(--auth-bg-gradient-end) 100%);
   color: var(--auth-text);
 }
 
@@ -49,7 +70,7 @@
   align-items: center;
   justify-content: center;
   padding: 3rem 2.5rem;
-  background: linear-gradient(180deg, #eef2ff 0%, #f8fbff 100%);
+  background: linear-gradient(180deg, var(--auth-hero-gradient-start) 0%, var(--auth-hero-gradient-end) 100%);
   border-right: 1px solid var(--auth-border);
 }
 
@@ -67,15 +88,11 @@
   align-items: center;
 }
 
-.hero-logo img {
-  animation: float 3.5s ease-in-out infinite;
-}
-
 .hero-title {
   font-size: 1.9rem;
   font-weight: 800;
   margin: 0;
-  color: #102a43;
+  color: var(--auth-text);
   letter-spacing: -0.03em;
   text-shadow: none;
 }
@@ -182,7 +199,7 @@
 .modern-input {
   width: 100%;
   padding: 0.9rem 1rem;
-  background: #ffffff;
+  background: var(--auth-input-bg);
   border: 1px solid var(--auth-border);
   border-radius: 10px;
   color: var(--auth-text);
@@ -193,12 +210,12 @@
 .modern-input:focus {
   outline: none;
   border-color: var(--auth-primary);
-  background: #ffffff;
+  background: var(--auth-input-bg);
   box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.12);
 }
 
 .modern-input::placeholder {
-  color: #94a3b8;
+  color: var(--auth-placeholder);
 }
 
 .submit-btn {
@@ -273,18 +290,6 @@
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@keyframes float {
-  0% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-8px);
-  }
-  100% {
-    transform: translateY(0px);
   }
 }
 

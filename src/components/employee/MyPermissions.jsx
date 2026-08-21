@@ -8,15 +8,36 @@ const MyPermissions = ({ isEmbedded = false }) => {
     const [categoryFilter, setCategoryFilter] = useState('ALL'); // ALL, Permission, Leave
     const [searchQuery, setSearchQuery] = useState('');
 
+    // ---- Helpers for "future only" date/time validation ----
+    const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+    const nowTimeStr = useMemo(() => {
+        const d = new Date();
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        return `${hh}:${mm}`;
+    }, []);
+
+    // ---- Latest request first: sort by true submission time ----
+    // Priority: requestDate (stamped by backend on create) > createdAt (if present)
+    // > timestamp embedded in the Mongo ObjectId > leave date (last-resort fallback).
     const permissions = useMemo(() => {
-        return (leaveRequests || []).sort((a, b) => new Date(b.date || b.startDate) - new Date(a.date || a.startDate));
+        const getSortKey = (r) => {
+            const ts = r.requestDate || r.createdAt || r.submittedAt || r.createdOn;
+            if (ts) return new Date(ts).getTime();
+            if (typeof r.id === 'string' && /^[0-9a-fA-F]{24}$/.test(r.id)) {
+                // First 8 hex chars of a Mongo ObjectId are a 4-byte creation timestamp (seconds)
+                return parseInt(r.id.substring(0, 8), 16) * 1000;
+            }
+            return new Date(r.date || r.startDate).getTime();
+        };
+        return [...(leaveRequests || [])].sort((a, b) => getSortKey(b) - getSortKey(a));
     }, [leaveRequests]);
 
     // Form State
     const [formData, setFormData] = useState({
         type: 'Short Leave',
-        startDate: new Date().toISOString().split('T')[0],
-        endDate: new Date().toISOString().split('T')[0],
+        startDate: todayStr,
+        endDate: todayStr,
         startTime: '09:00',
         endTime: '10:00',
         reason: ''
@@ -67,8 +88,41 @@ const MyPermissions = ({ isEmbedded = false }) => {
         });
     }, [permissions, statusFilter, categoryFilter, searchQuery]);
 
+    // ---- Future-only validation before submit ----
+    const validateFutureDateTime = () => {
+        if (isLeaveType(formData.type)) {
+            if (formData.startDate < todayStr) {
+                alert("Start date cannot be in the past. Please choose today or a future date.");
+                return false;
+            }
+            if (formData.endDate < formData.startDate) {
+                alert("End date cannot be before the start date.");
+                return false;
+            }
+        } else {
+            if (formData.startDate < todayStr) {
+                alert("Date cannot be in the past. Please choose today or a future date.");
+                return false;
+            }
+            // If the permission is for today, the start time must not already have passed
+            if (formData.startDate === todayStr && formData.startTime < nowTimeStr) {
+                alert("Start time cannot be in the past. Please choose a future time.");
+                return false;
+            }
+            if (formData.endTime <= formData.startTime) {
+                alert("End time must be after the start time.");
+                return false;
+            }
+        }
+        return true;
+    };
+
     const handleFormSubmit = async (e) => {
         e.preventDefault();
+
+        if (!validateFutureDateTime()) {
+            return;
+        }
 
         let duration = '';
         if (isLeaveType(formData.type)) {
@@ -88,6 +142,7 @@ const MyPermissions = ({ isEmbedded = false }) => {
             ...formData,
             date: formData.startDate,
             duration: duration,
+            createdAt: new Date().toISOString(),
         };
 
         const result = await submitLeaveRequest(newRequest);
@@ -638,7 +693,7 @@ const MyPermissions = ({ isEmbedded = false }) => {
                                     })}
                                 </div>
 
-                                {/* Dynamic Date/Time Fields */}
+                                {/* Dynamic Date/Time Fields - future dates/times only */}
                                 {isLeaveType(formData.type) ? (
                                     <div className="row g-3 mb-3">
                                         <div className="col-md-6">
@@ -647,8 +702,17 @@ const MyPermissions = ({ isEmbedded = false }) => {
                                                 type="date"
                                                 className="form-control"
                                                 required
+                                                min={todayStr}
                                                 value={formData.startDate}
-                                                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                                                onChange={(e) => {
+                                                    const newStart = e.target.value;
+                                                    setFormData({
+                                                        ...formData,
+                                                        startDate: newStart,
+                                                        // Keep end date valid if it was before the new start date
+                                                        endDate: formData.endDate < newStart ? newStart : formData.endDate,
+                                                    });
+                                                }}
                                                 style={{ borderRadius: '10px', padding: '10px 12px' }}
                                             />
                                         </div>
@@ -658,7 +722,7 @@ const MyPermissions = ({ isEmbedded = false }) => {
                                                 type="date"
                                                 className="form-control"
                                                 required
-                                                min={formData.startDate}
+                                                min={formData.startDate < todayStr ? todayStr : formData.startDate}
                                                 value={formData.endDate}
                                                 onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                                                 style={{ borderRadius: '10px', padding: '10px 12px' }}
@@ -673,6 +737,7 @@ const MyPermissions = ({ isEmbedded = false }) => {
                                                 type="date"
                                                 className="form-control"
                                                 required
+                                                min={todayStr}
                                                 value={formData.startDate}
                                                 onChange={(e) => setFormData({ ...formData, startDate: e.target.value, endDate: e.target.value })}
                                                 style={{ borderRadius: '10px', padding: '10px 12px' }}
@@ -684,6 +749,7 @@ const MyPermissions = ({ isEmbedded = false }) => {
                                                 type="time"
                                                 className="form-control"
                                                 required
+                                                min={formData.startDate === todayStr ? nowTimeStr : undefined}
                                                 value={formData.startTime}
                                                 onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
                                                 style={{ borderRadius: '10px', padding: '10px 12px' }}
@@ -695,12 +761,19 @@ const MyPermissions = ({ isEmbedded = false }) => {
                                                 type="time"
                                                 className="form-control"
                                                 required
+                                                min={formData.startTime}
                                                 value={formData.endTime}
                                                 onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
                                                 style={{ borderRadius: '10px', padding: '10px 12px' }}
                                             />
                                         </div>
                                     </div>
+                                )}
+                                {formData.startDate === todayStr && (
+                                    <p className="small text-muted mt-n2 mb-3">
+                                        <i className="bi bi-info-circle me-1"></i>
+                                        Since you picked today, times must be later than the current time ({nowTimeStr}).
+                                    </p>
                                 )}
 
                                 {/* Reason Textarea */}

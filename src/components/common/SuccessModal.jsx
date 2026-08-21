@@ -27,10 +27,15 @@ const SuccessModal = ({ isOpen, onClose, title = "Success!", message, subMessage
                     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
                     @keyframes scaleUp { from { transform: scale(0.8); } to { transform: scale(1); } }
                     .success-modal-card {
-                        background: white; padding: 2rem; border-radius: 20px;
+                        background: var(--surface); padding: 2rem; border-radius: 20px;
                         text-align: center; width: 90%; max-width: 400px;
                         box-shadow: 0 10px 30px rgba(0,0,0,0.2);
                         animation: scaleUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                    }
+                    .success-modal-card .bg-light {
+                        background-color: var(--surface-soft) !important;
+                        color: var(--text-main) !important;
+                        border-color: var(--border-color) !important;
                     }
                 `}
             </style>
@@ -48,7 +53,7 @@ const SuccessModal = ({ isOpen, onClose, title = "Success!", message, subMessage
                         </svg>
                     </div>
                 </div>
-                <h4 className="fw-bold text-dark mb-2">{title}</h4>
+                <h4 className="fw-bold mb-2" style={{ color: 'var(--text-main)' }}>{title}</h4>
                 <p className="text-muted mb-4">{message}</p>
 
                 {subMessage && (

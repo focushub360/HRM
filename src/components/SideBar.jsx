@@ -143,7 +143,7 @@ const SideBar = () => {
           {user?.profileImage ? (
             <img src={user.profileImage} alt="User" className="avatar" style={{ objectFit: 'cover' }} />
           ) : user?.role === 'admin' ? (
-            <div className="avatar bg-white p-1 d-flex align-items-center justify-content-center shadow-sm" style={{ width: '50px', height: '50px', minWidth: '50px', borderRadius: '50%' }}>
+            <div className="avatar p-1 d-flex align-items-center justify-content-center shadow-sm" style={{ width: '50px', height: '50px', minWidth: '50px', borderRadius: '50%', backgroundColor: '#ffffff' }}>
                <img src={logo} alt="Admin" className="img-fluid" style={{ maxHeight: '100%', objectFit: 'contain' }} />
             </div>
           ) : (
@@ -253,4 +253,3 @@ const SideBar = () => {
 };
 
 export default SideBar;
-

@@ -13,6 +13,16 @@
   --glass-border: 1px solid #dbe5f0;
   --glass-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
   --glass-blur: none;
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --success: #10b981;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --info: #06b6d4;
+  --bg-card: #ffffff;
+  --accent: #4f46e5;
+  --accent-soft: rgba(79, 70, 229, 0.12);
+  --input-bg: #ffffff;
   --primary-gradient: linear-gradient(135deg, #4f46e5 0%, #2563eb 100%);
   --secondary-gradient: linear-gradient(135deg, #64748b 0%, #475569 100%);
   --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
@@ -25,7 +35,7 @@
 [data-theme='dark'] {
   --bg-main: #0f172a;
   --bg-gradient: linear-gradient(180deg, #0f172a 0%, #111827 100%);
-  --text-main: #f8fafc;
+  --text-main: #ffffff;
   --text-muted: #cbd5e1;
   --text-inverse: #0f172a;
   --surface: #111827;
@@ -34,6 +44,10 @@
   --glass-bg: #111827;
   --glass-border: 1px solid #243244;
   --glass-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
+  --bg-card: #111827;
+  --accent: #818cf8;
+  --accent-soft: rgba(129, 140, 248, 0.18);
+  --input-bg: #0f172a;
 }
 
 body {
@@ -57,7 +71,7 @@ h6,
 .h4,
 .h5,
 .h6 {
-  color: var(--text-main) !important;
+  color: var(--text-main);
   letter-spacing: -0.02em;
 }
 
@@ -153,6 +167,12 @@ a:hover {
   border: 1px solid var(--border-color) !important;
 }
 
+[data-theme='dark'] .btn-light {
+  background: #1e293b !important;
+  color: #f8fafc !important;
+  border: 1px solid var(--border-color) !important;
+}
+
 .btn-dark {
   background: #1f2937 !important;
   color: #ffffff !important;
@@ -204,6 +224,12 @@ textarea:focus {
 .table {
   color: var(--text-main) !important;
   border-color: var(--border-color);
+  --bs-table-bg: transparent;
+}
+
+.table > :not(caption) > * > * {
+  background-color: var(--surface) !important;
+  color: var(--text-main) !important;
 }
 
 .table th {
@@ -239,33 +265,49 @@ textarea:focus {
 
 .bg-primary,
 .text-bg-primary {
-  background: #4f46e5 !important;
+  --bs-primary-rgb: 79, 70, 229;
+  background-color: rgba(var(--bs-primary-rgb), var(--bs-bg-opacity, 1)) !important;
   color: #ffffff !important;
 }
 
 .bg-success,
 .text-bg-success {
-  background: #10b981 !important;
+  --bs-success-rgb: 16, 185, 129;
+  background-color: rgba(var(--bs-success-rgb), var(--bs-bg-opacity, 1)) !important;
   color: #ffffff !important;
 }
 
 .bg-danger,
 .text-bg-danger {
-  background: #ef4444 !important;
+  --bs-danger-rgb: 239, 68, 68;
+  background-color: rgba(var(--bs-danger-rgb), var(--bs-bg-opacity, 1)) !important;
   color: #ffffff !important;
 }
 
 .bg-warning,
 .text-bg-warning {
-  background: #f59e0b !important;
+  --bs-warning-rgb: 245, 158, 11;
+  background-color: rgba(var(--bs-warning-rgb), var(--bs-bg-opacity, 1)) !important;
   color: #1f2937 !important;
 }
 
 .bg-info,
 .text-bg-info {
-  background: #06b6d4 !important;
+  --bs-info-rgb: 6, 182, 212;
+  background-color: rgba(var(--bs-info-rgb), var(--bs-bg-opacity, 1)) !important;
   color: #ffffff !important;
 }
+
+/* When used as a subtle opacity tint (bg-opacity-*), pair with Bootstrap's
+   own text-* utility for the colored text — don't force white/dark text here */
+.bg-primary.bg-opacity-10, .bg-primary.bg-opacity-25 { color: #4f46e5 !important; }
+.bg-success.bg-opacity-10, .bg-success.bg-opacity-25 { color: #10b981 !important; }
+.bg-danger.bg-opacity-10, .bg-danger.bg-opacity-25 { color: #ef4444 !important; }
+.bg-warning.bg-opacity-10, .bg-warning.bg-opacity-25 { color: #b45309 !important; }
+.bg-info.bg-opacity-10, .bg-info.bg-opacity-25 { color: #0891b2 !important; }
+
+[data-theme='dark'] .bg-warning.bg-opacity-10, [data-theme='dark'] .bg-warning.bg-opacity-25 { color: #fbbf24 !important; }
+[data-theme='dark'] .bg-info.bg-opacity-10, [data-theme='dark'] .bg-info.bg-opacity-25 { color: #22d3ee !important; }
 
 .sidebar {
   background: var(--surface) !important;
@@ -359,4 +401,103 @@ textarea:focus {
 [data-theme='dark'] .form-label,
 [data-theme='dark'] .input-group-text {
   color: #f8fafc !important;
+}
+
+/* Bootstrap utility classes used raw throughout the app (bg-white, bg-light,
+   text-dark, text-black, bg-body) are not theme-aware by default — they force
+   a fixed light-mode color regardless of the current theme. Make them follow
+   the theme everywhere so nothing is ever stuck white-on-dark or black-on-light. */
+.bg-white {
+  background-color: var(--surface) !important;
+}
+
+/* Small "LIVE" pulse-dot indicators sit inside a solid colored badge (e.g.
+   badge bg-danger) and are meant to always read as a plain white dot,
+   not adapt to the page theme like a surface would. */
+.badge .bg-white {
+  background-color: #ffffff !important;
+}
+
+.bg-light,
+.bg-body,
+.bg-body-tertiary,
+.bg-body-secondary {
+  background-color: var(--surface-soft) !important;
+  color: var(--text-main) !important;
+}
+
+.text-black,
+.text-body,
+.text-body-emphasis {
+  color: var(--text-main) !important;
+}
+
+.border-secondary,
+.border-light {
+  border-color: var(--border-color) !important;
+}
+
+[data-theme='dark'] .input-group-text {
+  background-color: var(--surface-soft) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme='dark'] .dropdown-menu {
+  background-color: var(--surface) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-main) !important;
+}
+
+[data-theme='dark'] .dropdown-item {
+  color: var(--text-main) !important;
+}
+
+[data-theme='dark'] .dropdown-item:hover,
+[data-theme='dark'] .dropdown-item:focus {
+  background-color: var(--surface-soft) !important;
+  color: var(--text-main) !important;
+}
+
+[data-theme='dark'] .modal-content {
+  background-color: var(--surface) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-main) !important;
+}
+
+[data-theme='dark'] .modal-header,
+[data-theme='dark'] .modal-footer {
+  border-color: var(--border-color) !important;
+}
+
+[data-theme='dark'] .list-group-item {
+  background-color: var(--surface) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-main) !important;
+}
+
+[data-theme='dark'] .close,
+[data-theme='dark'] .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+[data-theme='dark'] hr {
+  border-color: var(--border-color) !important;
+  opacity: 0.5;
+}
+
+[data-theme='dark'] ::placeholder {
+  color: #64748b !important;
+  opacity: 1;
+}
+
+[data-theme='dark'] .nav-tabs,
+[data-theme='dark'] .nav-tabs .nav-link {
+  border-color: var(--border-color) !important;
+  color: var(--text-muted) !important;
+}
+
+[data-theme='dark'] .nav-tabs .nav-link.active {
+  background-color: var(--surface) !important;
+  border-color: var(--border-color) var(--border-color) var(--surface) !important;
+  color: var(--text-main) !important;
 }
