@@ -22,6 +22,8 @@ const start = async () => {
     'https://www.hrms.focusengineeringapp.com',
     'http://localhost:5173',
     'http://localhost:3000',
+    'http://localhost:4173/',
+
   ];
   const envOrigins = process.env.CORS_ORIGIN && process.env.CORS_ORIGIN !== '*'
     ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())

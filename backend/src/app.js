@@ -33,8 +33,32 @@ app.use(cors({
   },
   credentials: true,
 }));
+
 // ---------- Security & Rate Limiting ----------
-app.use(helmet());
+// FIX: Helmet's default Content-Security-Policy sets `script-src 'self'`
+// with NO 'unsafe-eval'. Vite's dev server (Fast Refresh / HMR client)
+// relies on eval()/new Function() to wire up module boundaries correctly
+// — when CSP blocks that, HMR can silently corrupt a component's stored
+// effect-cleanup reference, producing "TypeError: destroy is not a
+// function" seemingly at random. This only matters if this Express app
+// ever serves (or proxies/shares headers with) the page the browser
+// navigates to; if the frontend is always served purely by Vite on a
+// separate origin, Helmet's headers on API responses don't affect page
+// script execution at all — but there's no downside to relaxing this
+// only in dev, so we do it unconditionally for safety.
+app.use(
+  helmet({
+    contentSecurityPolicy:
+      process.env.NODE_ENV === 'production'
+        ? undefined // use Helmet's secure defaults in production
+        : {
+            directives: {
+              ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+              'script-src': ["'self'", "'unsafe-eval'", "'unsafe-inline'"],
+            },
+          },
+  })
+);
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes

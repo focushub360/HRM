@@ -167,12 +167,40 @@ export const AuthProvider = ({ children }) => {
     const newSocket = io(SOCKET_URL);
     setSocket(newSocket);
 
-    // Join personal room
-    const personalRoomId = user.empId || user.id;
-    if (personalRoomId) newSocket.emit('join-room', String(personalRoomId));
-    
-    // Join company room for broadcasts and general chats
-    if (user.companyId) newSocket.emit('join-room', String(user.companyId));
+    // FIX (messages/notifications silently stop arriving after some time):
+    // Socket.IO rooms belong to the server-side socket INSTANCE, not to the
+    // logical user. `socket.emit('join-room', ...)` only re-registers room
+    // membership for the connection it's sent on. The old code sent these
+    // joins exactly once, right after calling io(SOCKET_URL) — which works
+    // for the very first connection (emits are buffered until connected),
+    // but any later reconnect (tab backgrounded and resumed, brief wifi
+    // drop, server restart/redeploy) hands the client a brand-new
+    // server-side socket with ZERO room membership, and nothing ever
+    // re-joins it. The client still shows "connected", but that person
+    // silently stops receiving DMs, team messages, and broadcasts from
+    // that point on with no error anywhere. Registering the joins inside
+    // `on('connect', ...)` instead makes them re-run on every single
+    // connection — first one and every reconnect after it.
+    //
+    // Also: personalRoomId now falls back to `user.email` as a third
+    // option, matching the 3-way fallback (`empId || id || email`) used
+    // everywhere else in the app (Chat.jsx, teamController.js, message
+    // senderId/receiverId). A Company Admin login has neither `empId` nor
+    // `id` at all (see authController.js's findAdminMatch), so without
+    // this fallback that account's personal room join was silently skipped
+    // entirely — `if (personalRoomId)` was false and nothing ever joined.
+    const joinRooms = () => {
+      const personalRoomId = user.empId || user.id || user.email;
+      if (personalRoomId) newSocket.emit('join-room', String(personalRoomId));
+
+      // Join company room for broadcasts and general chats
+      if (user.companyId) newSocket.emit('join-room', String(user.companyId));
+    };
+
+    newSocket.on('connect', joinRooms);
+    // Cover the (rare) case where the socket is already connected by the
+    // time this listener attaches.
+    if (newSocket.connected) joinRooms();
 
     newSocket.on('new-notification', (notif) => {
       setNotifications(prev => [notif, ...prev]);
@@ -193,9 +221,10 @@ export const AuthProvider = ({ children }) => {
     });
 
     return () => {
+      newSocket.off('connect', joinRooms);
       newSocket.disconnect();
     };
-  }, [isAuthenticated, user?.id, user?.empId]);
+  }, [isAuthenticated, user?.id, user?.empId, user?.email]);
 
   const login = (userData) => {
     localStorage.setItem('user', JSON.stringify(userData));

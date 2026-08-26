@@ -11,6 +11,7 @@ const STATUS_CONFIG = {
 
 const TASK_STATUS = {
     'Todo':        { color: '#6b7280', bg: 'rgba(107,114,128,0.1)' },
+    'Pending':     { color: '#6b7280', bg: 'rgba(107,114,128,0.1)' }, // legacy tasks created before the default was fixed
     'In Progress': { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
     'Completed':   { color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
 };
@@ -153,7 +154,7 @@ const Txt = (props) => (
 );
 
 // ─── Project Card ─────────────────────────────────────────────────────────────
-const ProjectCard = ({ project, tasks = [], employees, onAddTask, onUpdateTaskStatus, onUpdateProjectStatus, onEditProject, onDeleteProject, user, canCreateProject }) => {
+const ProjectCard = ({ project, tasks = [], employees, onAddTask, onUpdateTaskStatus, onEditTask, onDeleteTask, onUpdateProjectStatus, onEditProject, onDeleteProject, user, canCreateProject }) => {
     const [expanded, setExpanded] = useState(false);
     const pct = tasks.length === 0 ? 0 : Math.round(tasks.filter(t => t.status === 'Completed').length / tasks.length * 100);
     const teamColors = ['#4f46e5', '#7c3aed', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'];
@@ -162,13 +163,19 @@ const ProjectCard = ({ project, tasks = [], employees, onAddTask, onUpdateTaskSt
     const isMember = project.teamMembers?.some(m => String(m.id) === myId);
     const memberObj = project.teamMembers?.find(m => String(m.id) === myId);
     const isProjectLead = memberObj?.role?.toLowerCase()?.includes('lead') || canCreateProject;
+    const canManageTasks = canCreateProject || isProjectLead;
 
     const getEmpName = (id) => employees.find(e => e.id === parseInt(id))?.name || id;
 
     return (
         <div style={{
             background: 'var(--card-bg, #fff)',
-            borderRadius: 18, overflow: 'hidden',
+            borderRadius: 18,
+            // NOTE: intentionally no `overflow: hidden` here. The expanded task list
+            // (below) is a floating dropdown that must escape this card's box —
+            // clipping it here was cutting off the bottom of the dropdown. The top
+            // stripe below rounds its own corners instead, so the card still looks
+            // correctly rounded without clipping its children.
             boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
             border: '1px solid var(--border-color, rgba(0,0,0,0.06))',
             transition: 'transform 0.2s, box-shadow 0.2s',
@@ -177,8 +184,8 @@ const ProjectCard = ({ project, tasks = [], employees, onAddTask, onUpdateTaskSt
         onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(0,0,0,0.12)'; }}
         onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.07)'; }}
         >
-            {/* Color stripe */}
-            <div style={{ height: 4, background: 'linear-gradient(90deg, #4f46e5, #7c3aed)' }} />
+            {/* Color stripe — rounds its own top corners since the card no longer clips overflow */}
+            <div style={{ height: 4, borderTopLeftRadius: 18, borderTopRightRadius: 18, background: 'linear-gradient(90deg, #4f46e5, #7c3aed)' }} />
 
             <div style={{ padding: '20px 22px', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
                 {/* Top row */}
@@ -280,14 +287,16 @@ const ProjectCard = ({ project, tasks = [], employees, onAddTask, onUpdateTaskSt
                     </div>
                 </div>
 
-                {/* Tasks section */}
-                <div style={{ borderTop: '1px solid var(--border-color, rgba(0,0,0,0.06))', paddingTop: 14 }}>
+                {/* Tasks section — the expanded list is an absolutely-positioned dropdown so it
+                    never changes this card's height (and therefore never resizes sibling cards
+                    in the same grid row). Click outside it to close. */}
+                <div style={{ borderTop: '1px solid var(--border-color, rgba(0,0,0,0.06))', paddingTop: 14, position: 'relative' }}>
                     <button
                         onClick={() => setExpanded(v => !v)}
                         style={{
                             width: '100%', background: 'none', border: 'none', cursor: 'pointer',
                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                            padding: 0, marginBottom: expanded ? 10 : 0,
+                            padding: 0,
                             color: 'var(--text-muted, #6b7280)', fontSize: 12, fontWeight: 600,
                         }}>
                         <span>TASKS ({tasks.length})</span>
@@ -298,54 +307,103 @@ const ProjectCard = ({ project, tasks = [], employees, onAddTask, onUpdateTaskSt
                     </button>
 
                     {expanded && (
-                        <div style={{ maxHeight: 200, overflowY: 'auto', marginBottom: 12 }}>
+                        <>
+                            {/* invisible backdrop — click anywhere outside the dropdown to close it */}
+                            <div onClick={() => setExpanded(false)} style={{ position: 'fixed', inset: 0, zIndex: 39 }} />
+                            <div style={{
+                                position: 'absolute', top: 'calc(100% + 8px)', left: 0, right: 0, zIndex: 40,
+                                background: 'var(--card-bg, #fff)',
+                                border: '1px solid var(--border-color, rgba(0,0,0,0.08))',
+                                borderRadius: 12,
+                                boxShadow: '0 16px 40px rgba(0,0,0,0.22)',
+                                maxHeight: 280, overflowY: 'auto', padding: 10,
+                            }}>
                             {tasks.length === 0
                                 ? <p style={{ textAlign: 'center', color: 'var(--text-muted, #6b7280)', fontSize: 13, padding: '12px 0', margin: 0 }}>No tasks yet</p>
                                 : tasks.map(task => {
                                     const ts = TASK_STATUS[task.status] || TASK_STATUS['Todo'];
+                                    const taskId = task.id || task._id;
                                     // Check if current user is assigned (handles both array and single value formats)
-                                    const assignedToList = Array.isArray(task.assignedToMultiple) 
-                                        ? task.assignedToMultiple 
+                                    const assignedToList = Array.isArray(task.assignedToMultiple)
+                                        ? task.assignedToMultiple
                                         : (task.assignedTo ? [task.assignedTo] : []);
                                     const isMyTask = assignedToList.some(id => String(id) === myId);
-                                        
+
                                     return (
-                                        <div key={task.id || task._id} style={{
-                                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                        <div key={taskId} style={{
                                             padding: '8px 10px', borderRadius: 9, marginBottom: 6,
                                             background: isMyTask ? 'rgba(79,70,229,0.06)' : 'var(--surface-soft, rgba(0,0,0,0.025))',
                                             border: isMyTask ? '1px solid rgba(79,70,229,0.25)' : '1px solid transparent',
                                         }}>
-                                            <div style={{ flexGrow: 1, marginRight: 8 }}>
-                                                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                    {task.title}
-                                                    {isMyTask && <span style={{ fontSize: 10, background: '#4f46e5', color: '#fff', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>Your Task</span>}
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                <div style={{ flexGrow: 1, marginRight: 8 }}>
+                                                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                        {task.title}
+                                                        {isMyTask && <span style={{ fontSize: 10, background: '#4f46e5', color: '#fff', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>Your Task</span>}
+                                                    </div>
+                                                    <div style={{ fontSize: 11, color: 'var(--text-muted, #6b7280)' }}>→ {task.assignedToName || 'Unassigned'}</div>
                                                 </div>
-                                                <div style={{ fontSize: 11, color: 'var(--text-muted, #6b7280)' }}>→ {task.assignedToName || 'Unassigned'}</div>
+                                                <select
+                                                    value={task.status || 'Todo'}
+                                                    onChange={(e) => onUpdateTaskStatus(taskId, e.target.value)}
+                                                    style={{
+                                                        padding: '3px 8px', borderRadius: 12, fontSize: 11, fontWeight: 600,
+                                                        background: ts.bg, color: ts.color, border: `1px solid ${ts.color}44`,
+                                                        cursor: 'pointer', outline: 'none'
+                                                    }}
+                                                >
+                                                    <option value="Todo">Todo</option>
+                                                    <option value="In Progress">In Progress</option>
+                                                    <option value="Completed">Completed</option>
+                                                </select>
                                             </div>
-                                            <select
-                                                value={task.status || 'Todo'}
-                                                onChange={(e) => onUpdateTaskStatus(task.id || task._id, e.target.value)}
-                                                style={{
-                                                    padding: '3px 8px', borderRadius: 12, fontSize: 11, fontWeight: 600,
-                                                    background: ts.bg, color: ts.color, border: `1px solid ${ts.color}44`,
-                                                    cursor: 'pointer', outline: 'none'
-                                                }}
-                                            >
-                                                <option value="Todo">Todo</option>
-                                                <option value="In Progress">In Progress</option>
-                                                <option value="Completed">Completed</option>
-                                            </select>
+
+                                            {canManageTasks && (
+                                                <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                                                    <button
+                                                        onClick={() => onEditTask(project, task)}
+                                                        style={{
+                                                            flex: 1, padding: '5px 8px', borderRadius: 7, cursor: 'pointer',
+                                                            border: '1px solid var(--border-color, rgba(0,0,0,0.1))',
+                                                            background: 'transparent', color: 'var(--text-main)',
+                                                            fontSize: 11, fontWeight: 600,
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                                                        }}
+                                                    >
+                                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                                        </svg>
+                                                        Edit
+                                                    </button>
+                                                    <button
+                                                        onClick={() => onDeleteTask(taskId, project.id)}
+                                                        style={{
+                                                            flex: 1, padding: '5px 8px', borderRadius: 7, cursor: 'pointer',
+                                                            border: '1px solid rgba(239,68,68,0.25)',
+                                                            background: 'rgba(239,68,68,0.05)', color: '#ef4444',
+                                                            fontSize: 11, fontWeight: 600,
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                                                        }}
+                                                    >
+                                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                            <polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                                        </svg>
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
                                     );
                                 })
                             }
-                        </div>
+                            </div>
+                        </>
                     )}
                 </div>
 
                 {/* Add task button - only for HR, TL, or Project Leads */}
-                {(canCreateProject || isProjectLead) && (
+                {canManageTasks && (
                     <button onClick={() => onAddTask(project)} style={{
                         width: '100%', padding: '10px', border: '1.5px dashed rgba(79,70,229,0.35)',
                         borderRadius: 10, background: 'rgba(79,70,229,0.04)',
@@ -364,7 +422,7 @@ const ProjectCard = ({ project, tasks = [], employees, onAddTask, onUpdateTaskSt
                 )}
 
                 {/* Edit / Delete row - only for HR / TL / project leads who can manage this project */}
-                {(canCreateProject || isProjectLead) && (
+                {canManageTasks && (
                     <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                         <button
                             onClick={() => onEditProject && onEditProject(project)}
@@ -382,7 +440,7 @@ const ProjectCard = ({ project, tasks = [], employees, onAddTask, onUpdateTaskSt
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                             </svg>
-                            Edit
+                            Edit Project
                         </button>
                         {canCreateProject && (
                             <button
@@ -400,7 +458,7 @@ const ProjectCard = ({ project, tasks = [], employees, onAddTask, onUpdateTaskSt
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                     <polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                                 </svg>
-                                Delete
+                                Delete Project
                             </button>
                         )}
                     </div>
@@ -409,6 +467,43 @@ const ProjectCard = ({ project, tasks = [], employees, onAddTask, onUpdateTaskSt
         </div>
     );
 };
+
+// ─── Employee picker (shared by Assign/Edit task modals) ──────────────────────
+const EmployeePicker = ({ candidates, selectedIds, onToggle, emptyMessage }) => (
+    <div style={{ maxHeight: 200, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 7, border: '1.5px solid var(--border-color, rgba(0,0,0,0.1))', borderRadius: 10, padding: 10, background: 'var(--surface-soft, rgba(0,0,0,0.02))' }}>
+        {candidates.length === 0 ? (
+            <p style={{ fontSize: 12, color: '#f59e0b', margin: 0, textAlign: 'center', padding: 10 }}>{emptyMessage}</p>
+        ) : (
+            candidates.map((emp, i) => {
+                const isSelected = selectedIds.includes(String(emp.id));
+                const color = ['#4f46e5','#7c3aed','#10b981','#f59e0b','#ef4444','#06b6d4'][i % 6];
+                return (
+                    <div key={emp.id} onClick={() => onToggle(emp.id)} style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '8px 10px', borderRadius: 8, cursor: 'pointer',
+                        border: `1.5px solid ${isSelected ? '#4f46e5' : 'transparent'}`,
+                        background: isSelected ? 'rgba(79,70,229,0.06)' : 'transparent',
+                        transition: 'all 0.15s',
+                    }}>
+                        <Avatar name={emp.name} size={30} color={color} />
+                        <div style={{ flexGrow: 1 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-main)' }}>{emp.name}</div>
+                            <div style={{ fontSize: 11, color: 'var(--text-muted, #6b7280)' }}>{emp.role || emp.designation || 'Team Member'}</div>
+                        </div>
+                        <div style={{
+                            width: 18, height: 18, borderRadius: 5, flexShrink: 0,
+                            border: `2px solid ${isSelected ? '#4f46e5' : 'var(--border-color, rgba(0,0,0,0.15))'}`,
+                            background: isSelected ? '#4f46e5' : 'transparent',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                            {isSelected && <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="white" strokeWidth="2" strokeLinecap="round"/></svg>}
+                        </div>
+                    </div>
+                );
+            })
+        )}
+    </div>
+);
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
 const EmptyState = ({ onNew, canCreateProject }) => (
@@ -453,7 +548,7 @@ const EmptyState = ({ onNew, canCreateProject }) => (
 // ─── Main Component ───────────────────────────────────────────────────────────
 const ProjectManagement = () => {
     const { user, companies } = useAuth();
-    
+
     const isHR = user?.type === 'hr' || user?.type === 'company' || user?.role === 'admin' || user?.isHeadHr;
     const isTL = user?.role === 'project_manager' || user?.role === 'team_lead' || user?.designation?.toLowerCase()?.includes('lead') || user?.designation?.toLowerCase()?.includes('manager');
     const canCreateProject = isHR || isTL;
@@ -467,12 +562,15 @@ const ProjectManagement = () => {
     const [projectModal, setProjectModal] = useState(false);
     const [taskModal, setTaskModal]       = useState(false);
     const [editModal, setEditModal]       = useState(false);
+    const [editTaskModal, setEditTaskModal] = useState(false);
     const [targetProject, setTargetProject] = useState(null);
     const [editingProject, setEditingProject] = useState(null);
+    const [editingTask, setEditingTask]   = useState(null);
 
     const [pForm, setPForm] = useState({ title: '', description: '', deadline: '', techStack: '', teamMembers: [] });
     const [tForm, setTForm] = useState({ title: '', description: '', assignedTo: [], dueDate: '' });
     const [eForm, setEForm] = useState({ title: '', description: '', deadline: '', techStack: '', teamMembers: [] });
+    const [teForm, setTeForm] = useState({ title: '', description: '', assignedTo: [], dueDate: '' });
     const [submitting, setSubmitting]   = useState(false);
 
     const intervalRef = useRef(null);
@@ -516,6 +614,7 @@ const ProjectManagement = () => {
         }
     }, [user, companies]);
 
+    // ── Project CRUD ─────────────────────────────────────────────────────────
     const handleCreateProject = async (e) => {
         e.preventDefault();
         if (!canCreateProject) return;
@@ -598,100 +697,6 @@ const ProjectManagement = () => {
         }
     };
 
-    const toggleTaskAssignee = (empId) => {
-        setTForm(prev => {
-            const strId = String(empId);
-            const has = prev.assignedTo.includes(strId);
-            return {
-                ...prev,
-                assignedTo: has 
-                    ? prev.assignedTo.filter(id => id !== strId)
-                    : [...prev.assignedTo, strId]
-            };
-        });
-    };
-
-    const handleAssignTask = async (e) => {
-        e.preventDefault();
-        if (!targetProject) return;
-        if (tForm.assignedTo.length === 0) {
-            alert("Please assign at least one employee to this task.");
-            return;
-        }
-        setSubmitting(true);
-        
-        const assignedEmps = employees.filter(emp => tForm.assignedTo.includes(String(emp.id)));
-        const assignedToNames = assignedEmps.map(e => e.name).join(', ');
-        
-        try {
-            const res = await fetch(`${API}/project-tasks`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    title: tForm.title,
-                    description: tForm.description,
-                    dueDate: tForm.dueDate,
-                    projectId: targetProject.id,
-                    projectTitle: targetProject.title,
-                    assignedTo: tForm.assignedTo[0], // Send first employee as single value for backward compatibility
-                    assignedToMultiple: tForm.assignedTo, // Send full array
-                    assignedToName: assignedToNames,
-                    assignedBy: user.name,
-                }),
-            });
-            if (res.ok) {
-                setTForm({ title: '', description: '', assignedTo: [], dueDate: '' });
-                setTaskModal(false);
-                loadProjects(true);
-            } else {
-                const errorData = await res.json().catch(() => ({}));
-                console.error('Failed to assign task:', errorData);
-                alert('Failed to assign task. Please check console for details.');
-            }
-        } catch (err) {
-            console.error('Error assigning task:', err);
-            alert('Error assigning task. Check console.');
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    const handleUpdateTaskStatus = async (taskId, newStatus) => {
-        try {
-            const res = await fetch(`${API}/project-tasks/${taskId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: newStatus }),
-            });
-            if (res.ok) {
-                setTaskMap(prev => {
-                    const next = { ...prev };
-                    Object.keys(next).forEach(pid => {
-                        next[pid] = next[pid].map(t => (t.id === taskId || t._id === taskId) ? { ...t, status: newStatus } : t);
-                    });
-                    return next;
-                });
-            }
-        } catch (err) {
-            console.error('Error updating task status:', err);
-        }
-    };
-
-    const handleUpdateProjectStatus = async (projectId, newStatus) => {
-        try {
-            const res = await fetch(`${API}/projects/${projectId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: newStatus }),
-            });
-            if (res.ok) {
-                setProjects(prev => prev.map(p => p.id === projectId ? { ...p, status: newStatus } : p));
-            }
-        } catch (err) {
-            console.error('Error updating project status:', err);
-        }
-    };
-
     const handleDeleteProject = async (projectId) => {
         try {
             const res = await fetch(`${API}/projects/${projectId}`, {
@@ -713,10 +718,205 @@ const ProjectManagement = () => {
         }
     };
 
+    // ── Task: create (Assign Task) ───────────────────────────────────────────
+    const toggleTaskAssignee = (empId) => {
+        setTForm(prev => {
+            const strId = String(empId);
+            const has = prev.assignedTo.includes(strId);
+            return {
+                ...prev,
+                assignedTo: has
+                    ? prev.assignedTo.filter(id => id !== strId)
+                    : [...prev.assignedTo, strId]
+            };
+        });
+    };
+
     const openTaskModal = (project) => {
         setTargetProject(project);
         setTForm({ title: '', description: '', assignedTo: [], dueDate: '' });
         setTaskModal(true);
+    };
+
+    const handleAssignTask = async (e) => {
+        e.preventDefault();
+        if (!targetProject) return;
+        if (tForm.assignedTo.length === 0) {
+            alert("Please assign at least one employee to this task.");
+            return;
+        }
+        setSubmitting(true);
+
+        const assignedEmps = employees.filter(emp => tForm.assignedTo.includes(String(emp.id)));
+        const assignedToNames = assignedEmps.map(e => e.name).join(', ');
+
+        try {
+            const res = await fetch(`${API}/project-tasks`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: tForm.title,
+                    description: tForm.description,
+                    dueDate: tForm.dueDate,
+                    projectId: targetProject.id,
+                    projectTitle: targetProject.title,
+                    assignedTo: tForm.assignedTo[0], // first employee, kept for backward compatibility
+                    assignedToMultiple: tForm.assignedTo, // full array
+                    assignedToName: assignedToNames,
+                    assignedBy: user.name,
+                }),
+            });
+            if (res.ok) {
+                setTForm({ title: '', description: '', assignedTo: [], dueDate: '' });
+                setTaskModal(false);
+                loadProjects(true);
+            } else {
+                const errorData = await res.json().catch(() => ({}));
+                console.error('Failed to assign task:', errorData);
+                alert('Failed to assign task. Please check console for details.');
+            }
+        } catch (err) {
+            console.error('Error assigning task:', err);
+            alert('Error assigning task. Check console.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    // ── Task: quick status change (dropdown on the card) ─────────────────────
+    const handleUpdateTaskStatus = async (taskId, newStatus) => {
+        try {
+            const res = await fetch(`${API}/project-tasks/${taskId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus }),
+            });
+            if (res.ok) {
+                setTaskMap(prev => {
+                    const next = { ...prev };
+                    Object.keys(next).forEach(pid => {
+                        next[pid] = next[pid].map(t => (t.id === taskId || t._id === taskId) ? { ...t, status: newStatus } : t);
+                    });
+                    return next;
+                });
+            } else {
+                console.error('Failed to update task status:', res.status);
+                alert('Failed to update task status.');
+            }
+        } catch (err) {
+            console.error('Error updating task status:', err);
+            alert('Error updating task status. Check console.');
+        }
+    };
+
+    // ── Task: edit (title/description/dueDate/assignees) ────────────────────
+    const openEditTaskModal = (project, task) => {
+        setTargetProject(project);
+        setEditingTask(task);
+        const assignedToList = Array.isArray(task.assignedToMultiple)
+            ? task.assignedToMultiple.map(String)
+            : (task.assignedTo ? [String(task.assignedTo)] : []);
+        setTeForm({
+            title: task.title || '',
+            description: task.description || '',
+            dueDate: task.dueDate || '',
+            assignedTo: assignedToList,
+        });
+        setEditTaskModal(true);
+    };
+
+    const toggleEditTaskAssignee = (empId) => {
+        setTeForm(prev => {
+            const strId = String(empId);
+            const has = prev.assignedTo.includes(strId);
+            return {
+                ...prev,
+                assignedTo: has
+                    ? prev.assignedTo.filter(id => id !== strId)
+                    : [...prev.assignedTo, strId],
+            };
+        });
+    };
+
+    const handleEditTaskSubmit = async (e) => {
+        e.preventDefault();
+        if (!editingTask || !targetProject) return;
+        if (teForm.assignedTo.length === 0) {
+            alert('Please assign at least one employee to this task.');
+            return;
+        }
+        setSubmitting(true);
+
+        const assignedEmps = employees.filter(emp => teForm.assignedTo.includes(String(emp.id)));
+        const assignedToNames = assignedEmps.map(e => e.name).join(', ');
+        const taskId = editingTask.id || editingTask._id;
+
+        try {
+            const res = await fetch(`${API}/project-tasks/${taskId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: teForm.title,
+                    description: teForm.description,
+                    dueDate: teForm.dueDate,
+                    assignedTo: teForm.assignedTo[0],
+                    assignedToMultiple: teForm.assignedTo,
+                    assignedToName: assignedToNames,
+                }),
+            });
+            if (res.ok) {
+                const updated = await res.json();
+                setTaskMap(prev => ({
+                    ...prev,
+                    [targetProject.id]: (prev[targetProject.id] || []).map(t =>
+                        (t.id || t._id) === taskId ? { ...t, ...updated } : t
+                    ),
+                }));
+                setEditTaskModal(false);
+                setEditingTask(null);
+            } else {
+                alert('Failed to update task.');
+            }
+        } catch (err) {
+            console.error('Error updating task:', err);
+            alert('Error updating task. Check console.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    // ── Task: delete ─────────────────────────────────────────────────────────
+    const handleDeleteTask = async (taskId, projectId) => {
+        if (!window.confirm('Delete this task?')) return;
+        try {
+            const res = await fetch(`${API}/project-tasks/${taskId}`, { method: 'DELETE' });
+            if (res.ok) {
+                setTaskMap(prev => ({
+                    ...prev,
+                    [projectId]: (prev[projectId] || []).filter(t => (t.id || t._id) !== taskId),
+                }));
+            } else {
+                alert('Failed to delete task.');
+            }
+        } catch (err) {
+            console.error('Error deleting task:', err);
+            alert('Error deleting task. Check console.');
+        }
+    };
+
+    const handleUpdateProjectStatus = async (projectId, newStatus) => {
+        try {
+            const res = await fetch(`${API}/projects/${projectId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus }),
+            });
+            if (res.ok) {
+                setProjects(prev => prev.map(p => p.id === projectId ? { ...p, status: newStatus } : p));
+            }
+        } catch (err) {
+            console.error('Error updating project status:', err);
+        }
     };
 
     const myId = String(user?.empId || user?.id);
@@ -724,8 +924,8 @@ const ProjectManagement = () => {
         .filter(p => {
             if (filter === 'Assigned to Me') {
                 return p.teamMembers?.some(m => String(m.id) === myId) || (taskMap[p.id] || []).some(t => {
-                    const assignedToList = Array.isArray(t.assignedToMultiple) 
-                        ? t.assignedToMultiple 
+                    const assignedToList = Array.isArray(t.assignedToMultiple)
+                        ? t.assignedToMultiple
                         : (t.assignedTo ? [t.assignedTo] : []);
                     return assignedToList.some(id => String(id) === myId);
                 });
@@ -736,9 +936,9 @@ const ProjectManagement = () => {
         .sort((a, b) => {
             const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
             const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-            
+
             if (dateA && dateB) return dateB - dateA;
-            
+
             const idA = typeof a.id === 'string' ? (parseInt(a.id, 10) || 0) : (a.id || 0);
             const idB = typeof b.id === 'string' ? (parseInt(b.id, 10) || 0) : (b.id || 0);
             return idB - idA;
@@ -751,12 +951,20 @@ const ProjectManagement = () => {
         ? ['All', 'Active', 'On Hold', 'Completed']
         : ['Assigned to Me', 'All Projects', 'Active', 'Completed'];
 
+    // Employees already on the target project's team — used by both Assign Task and Edit Task modals
+    const projectTeamEmployees = employees.filter(emp =>
+        targetProject?.teamMembers?.some(m => String(m.id) === String(emp.id))
+    ).map(emp => ({
+        ...emp,
+        role: targetProject?.teamMembers?.find(m => String(m.id) === String(emp.id))?.role,
+    }));
+
     return (
         <>
             <style>{`
                 @keyframes fadeIn  { from { opacity: 0 } to { opacity: 1 } }
                 @keyframes slideUp { from { transform: translateY(20px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
-                .pm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+                .pm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; align-items: start; }
                 .pm-stat { transition: box-shadow 0.2s; }
                 .pm-stat:hover { box-shadow: 0 6px 24px rgba(0,0,0,0.1) !important; }
             `}</style>
@@ -863,6 +1071,8 @@ const ProjectManagement = () => {
                                     employees={employees}
                                     onAddTask={openTaskModal}
                                     onUpdateTaskStatus={handleUpdateTaskStatus}
+                                    onEditTask={openEditTaskModal}
+                                    onDeleteTask={handleDeleteTask}
                                     onUpdateProjectStatus={handleUpdateProjectStatus}
                                     onEditProject={openEditModal}
                                     onDeleteProject={handleDeleteProject}
@@ -1058,49 +1268,17 @@ const ProjectManagement = () => {
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 14 }}>
                         <Field label="Assign Employees *">
-                            <div style={{ maxHeight: 200, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 7, border: '1.5px solid var(--border-color, rgba(0,0,0,0.1))', borderRadius: 10, padding: 10, background: 'var(--surface-soft, rgba(0,0,0,0.02))' }}>
-                                {employees.filter(emp => targetProject?.teamMembers?.some(m => String(m.id) === String(emp.id))).length === 0 ? (
-                                    <p style={{ fontSize: 12, color: '#f59e0b', margin: 0, textAlign: 'center', padding: 10 }}>
-                                        This project has no team members yet. Edit the project to add some before assigning tasks.
-                                    </p>
-                                ) : (
-                                    employees
-                                        .filter(emp => targetProject?.teamMembers?.some(m => String(m.id) === String(emp.id)))
-                                        .map(emp => {
-                                            const isSelected = tForm.assignedTo.includes(String(emp.id));
-                                            const role = targetProject?.teamMembers?.find(m => String(m.id) === String(emp.id))?.role;
-                                            const color = ['#4f46e5','#7c3aed','#10b981','#f59e0b','#ef4444','#06b6d4'][employees.indexOf(emp) % 6];
-                                            return (
-                                                <div key={emp.id} onClick={() => toggleTaskAssignee(emp.id)} style={{
-                                                    display: 'flex', alignItems: 'center', gap: 10,
-                                                    padding: '8px 10px', borderRadius: 8, cursor: 'pointer',
-                                                    border: `1.5px solid ${isSelected ? '#4f46e5' : 'transparent'}`,
-                                                    background: isSelected ? 'rgba(79,70,229,0.06)' : 'transparent',
-                                                    transition: 'all 0.15s',
-                                                }}>
-                                                    <Avatar name={emp.name} size={30} color={color} />
-                                                    <div style={{ flexGrow: 1 }}>
-                                                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-main)' }}>{emp.name}</div>
-                                                        <div style={{ fontSize: 11, color: 'var(--text-muted, #6b7280)' }}>{role || 'Team Member'}</div>
-                                                    </div>
-                                                    <div style={{
-                                                        width: 18, height: 18, borderRadius: 5, flexShrink: 0,
-                                                        border: `2px solid ${isSelected ? '#4f46e5' : 'var(--border-color, rgba(0,0,0,0.15))'}`,
-                                                        background: isSelected ? '#4f46e5' : 'transparent',
-                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                    }}>
-                                                        {isSelected && <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="white" strokeWidth="2" strokeLinecap="round"/></svg>}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })
-                                )}
-                            </div>
+                            <EmployeePicker
+                                candidates={projectTeamEmployees}
+                                selectedIds={tForm.assignedTo}
+                                onToggle={toggleTaskAssignee}
+                                emptyMessage="This project has no team members yet. Edit the project to add some before assigning tasks."
+                            />
                             <div style={{ fontSize: 11, color: 'var(--text-muted, #6b7280)', marginTop: 6 }}>
                                 {tForm.assignedTo.length} employee(s) selected
                             </div>
                         </Field>
-                        
+
                         <Field label="Due Date *">
                             <Inp type="date" required value={tForm.dueDate}
                                 onChange={e => setTForm(p => ({ ...p, dueDate: e.target.value }))} />
@@ -1124,6 +1302,58 @@ const ProjectManagement = () => {
                             opacity: submitting ? 0.7 : 1,
                         }}>
                             {submitting ? 'Assigning…' : 'Assign Task'}
+                        </button>
+                    </div>
+                </form>
+            </Modal>
+
+            <Modal show={editTaskModal} onClose={() => setEditTaskModal(false)}
+                title="Edit Task"
+                subtitle={targetProject ? `→ ${targetProject.title}` : ''}
+                width={520}
+            >
+                <form onSubmit={handleEditTaskSubmit}>
+                    <Field label="Task Title *">
+                        <Inp type="text" placeholder="What needs to be done?" required value={teForm.title}
+                            onChange={e => setTeForm(p => ({ ...p, title: e.target.value }))} />
+                    </Field>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 14 }}>
+                        <Field label="Assigned Employees *">
+                            <EmployeePicker
+                                candidates={projectTeamEmployees}
+                                selectedIds={teForm.assignedTo}
+                                onToggle={toggleEditTaskAssignee}
+                                emptyMessage="This project has no team members to assign."
+                            />
+                            <div style={{ fontSize: 11, color: 'var(--text-muted, #6b7280)', marginTop: 6 }}>
+                                {teForm.assignedTo.length} employee(s) selected
+                            </div>
+                        </Field>
+
+                        <Field label="Due Date *">
+                            <Inp type="date" required value={teForm.dueDate}
+                                onChange={e => setTeForm(p => ({ ...p, dueDate: e.target.value }))} />
+                        </Field>
+                    </div>
+
+                    <Field label="Details">
+                        <Txt placeholder="Specific instructions or notes…" value={teForm.description}
+                            onChange={e => setTeForm(p => ({ ...p, description: e.target.value }))} />
+                    </Field>
+
+                    <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
+                        <button type="button" onClick={() => setEditTaskModal(false)} style={{
+                            padding: '10px 20px', borderRadius: 10, border: '1.5px solid var(--border-color, rgba(0,0,0,0.1))',
+                            background: 'transparent', cursor: 'pointer', fontSize: 14, fontWeight: 500, color: 'var(--text-muted, #6b7280)',
+                        }}>Cancel</button>
+                        <button type="submit" disabled={submitting} style={{
+                            padding: '10px 24px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                            background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff',
+                            fontSize: 14, fontWeight: 600, boxShadow: '0 4px 12px rgba(79,70,229,0.35)',
+                            opacity: submitting ? 0.7 : 1,
+                        }}>
+                            {submitting ? 'Saving…' : 'Save Changes'}
                         </button>
                     </div>
                 </form>

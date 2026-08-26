@@ -4,6 +4,20 @@ import { capitalize } from '../utils/helpers.js';
 import { generateToken } from '../middleware/auth.js';
 import asyncHandler from '../utils/asyncHandler.js';
 
+// SECURITY FIX: every login path below used to spread the full DB
+// document (`...employee.toJSON()`, `...company.admin`, etc.) into the
+// response, which includes the plaintext `password` field. AuthContext.jsx
+// then JSON.stringifies that whole object straight into localStorage — so
+// every logged-in user's password sat in plaintext in their own browser,
+// readable by any XSS payload or malicious browser extension, indefinitely.
+// This strips `password` (and any nested variants) right before a result
+// is returned, in one place, so no login path can accidentally leak it.
+const sanitizeUser = (obj) => {
+  if (!obj || typeof obj !== 'object') return obj;
+  const { password, ...rest } = obj;
+  return rest;
+};
+
 // Tries to find a matching Company Admin login
 const findAdminMatch = async (email, password) => {
   const company = await Company.findOne({ 'admin.email': email });
@@ -92,7 +106,7 @@ export const login = asyncHandler(async (req, res) => {
         email: result.email
       });
 
-      return res.json({ ...result, token });
+      return res.json({ ...sanitizeUser(result), token });
     }
 
     if (sawWrongPassword) return res.status(401).json({ error: 'Invalid credentials' });
@@ -134,7 +148,7 @@ export const login = asyncHandler(async (req, res) => {
   }
 
   const token = generateToken({ role: result.role, companyId: result.companyId, email: result.email });
-  res.json({ ...result, token });
+  res.json({ ...sanitizeUser(result), token });
 });
 
 // POST /api/auth/change-password

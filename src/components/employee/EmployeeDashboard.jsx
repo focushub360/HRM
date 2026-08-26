@@ -555,7 +555,7 @@ const EmployeeDashboard = () => {
       </div>
 
       {/* Welcome Header */}
-      <div className="d-flex justify-content-between align-items-center mb-3 p-3 rounded shadow-sm card-custom flex-shrink-0">
+      <div className="d-flex justify-content-between align-items-center mb-3 p-3 rounded shadow-sm card-custom flex-shrink-0 ">
         <div>
           <h3 className="mb-1 fw-bold text-primary">
             {getGreeting()}, {user?.name || "Employee"}!
@@ -723,7 +723,7 @@ const EmployeeDashboard = () => {
                 <i className="bi bi-clock-history me-2 text-primary"></i>Daily Work & Attendance Records
               </h5>
               <div className="d-flex align-items-center gap-2">
-                <span className="badge bg-success bg-opacity-10 text-success px-3 py-2" style={{ fontSize: '0.78rem' }}>
+                <span className="badge bg-bodysuccess bg-opacity-10 text-success px-3 py-2" style={{ fontSize: '0.78rem' }}>
                   <i className="bi bi-shield-check me-1"></i>Auto Tracking Active
                 </span>
               </div>

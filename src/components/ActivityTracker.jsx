@@ -6,39 +6,53 @@ const LOCATION_UPDATE_INTERVAL = 300000; // 5 minutes
 
 const ActivityTracker = () => {
     const { user, logActivity, notifyInactivityAlert } = useAuth();
+
+    // IMPORTANT: every hook below runs on EVERY render, unconditionally.
+    // The old version had `if (!user || ...) return null;` BEFORE these
+    // hooks, so on some renders 5 hooks ran and on others 7 ran (once the
+    // two useEffect calls further down were reached). React requires the
+    // exact same hooks, in the exact same order, on every render — this
+    // is why the previous version could throw "Rendered fewer hooks than
+    // during the previous render" the moment `user` changed from
+    // null/non-employee to an employee object (e.g. right after login).
+    // Nothing else in this file changed the actual tracking behavior.
     const [isInactive, setIsInactive] = useState(false);
     const timerRef = useRef(null);
     const locationIntervalRef = useRef(null);
     const lastActivityRef = useRef(Date.now());
+    const isInactiveRef = useRef(false);
 
-    // Only run for employees - EXPLICITLY BLOCK ADMIN/HR
-    if (!user || user.type === 'company' || user.type === 'company_admin' || user.type === 'hr' || user.role === 'admin') {
-        return null;
-    }
+    // Only track for regular employees — never company/company_admin/hr/admin.
+    const isTrackedEmployee =
+        !!user &&
+        user.type === 'employee' &&
+        user.type !== 'company' &&
+        user.type !== 'company_admin' &&
+        user.type !== 'hr' &&
+        user.role !== 'admin';
 
-    if (user.type !== 'employee') {
-        return null;
-    }
+    useEffect(() => {
+        isInactiveRef.current = isInactive;
+    }, [isInactive]);
 
     // --- Inactivity Logic ---
     const resetInactivityTimer = () => {
+        if (!isTrackedEmployee) return;
+
         const isCheckedIn = localStorage.getItem("isActiveCheckIn") === "true";
 
-        // Always clear existing timer first
         if (timerRef.current) {
             clearTimeout(timerRef.current);
         }
 
-        // Only track if checked in
         if (!isCheckedIn) {
-            // If not checked in, ensure inactivity state is reset if it was active
-            if (isInactive) {
+            if (isInactiveRef.current) {
                 setIsInactive(false);
             }
             return;
         }
 
-        if (isInactive) {
+        if (isInactiveRef.current) {
             console.log('User active again');
             setIsInactive(false);
             logActivity({ action: 'ACTIVE', details: 'User resumed activity' });
@@ -52,10 +66,12 @@ const ActivityTracker = () => {
     };
 
     const handleInactivity = () => {
+        if (!isTrackedEmployee) return;
+
         const isCheckedIn = localStorage.getItem("isActiveCheckIn") === "true";
         if (!isCheckedIn) return;
 
-        if (!isInactive) {
+        if (!isInactiveRef.current) {
             console.log('Inactivity detected');
             setIsInactive(true);
             notifyInactivityAlert({
@@ -66,7 +82,7 @@ const ActivityTracker = () => {
         }
     };
 
-    // --- Location Logic ---
+    // --- Location Logic (kept for parity; not wired to an interval, matching original) ---
     const fetchAddress = async (lat, lon) => {
         try {
             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
@@ -82,6 +98,7 @@ const ActivityTracker = () => {
         // EXPLICITLY DISABLED FOR WEB - Do not run.
         return;
 
+        // eslint-disable-next-line no-unreachable
         if (!navigator.geolocation) return;
 
         navigator.geolocation.getCurrentPosition(async (pos) => {
@@ -104,9 +121,10 @@ const ActivityTracker = () => {
 
     // 1. Inactivity Tracking Effect
     useEffect(() => {
+        if (!isTrackedEmployee) return;
+
         const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
 
-        // Initial setup
         resetInactivityTimer();
 
         const eventHandler = () => resetInactivityTimer();
@@ -115,7 +133,6 @@ const ActivityTracker = () => {
             window.addEventListener(event, eventHandler);
         });
 
-        // Poll for check-in status changes to start/stop tracking
         const checkInPoller = setInterval(() => {
             resetInactivityTimer();
         }, 5000);
@@ -128,21 +145,20 @@ const ActivityTracker = () => {
             clearInterval(checkInPoller);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user.empId]);
+    }, [isTrackedEmployee, user?.empId]);
 
     // 2. Location Tracking Effect - DISABLED for Web as per requirement
-    // Only Check-In/Check-Out location is needed.
-    // Periodic tracking is removed to prevent "very frequent" logs.
     useEffect(() => {
-        // Start tracking location
-        // trackLocation(); 
-        // locationIntervalRef.current = setInterval(trackLocation, LOCATION_UPDATE_INTERVAL);
-
         return () => {
             if (locationIntervalRef.current) clearInterval(locationIntervalRef.current);
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // All hooks have already run by this point on every render, so it's
+    // safe to conditionally skip rendering output here.
+    if (!isTrackedEmployee) {
+        return null;
+    }
 
     return (
         <>
