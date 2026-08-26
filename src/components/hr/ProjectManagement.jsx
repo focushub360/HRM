@@ -16,6 +16,17 @@ const TASK_STATUS = {
     'Completed':   { color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
 };
 
+// Employees have TWO identifier fields on the backend: a numeric `id`
+// (primary key) and a string `empId` (employee code). AuthContext.js
+// prioritizes `empId` everywhere it identifies "who is logged in" — the
+// socket room join, and the notifications fetch URL both do
+// `user.empId || user.id`. Every place in THIS file that stores or compares
+// an employee identifier (team members, task assignees) must use the exact
+// same priority, or an assignment silently never matches the logged-in
+// user it was meant for — which is exactly why assigned tasks/notifications
+// weren't reaching employees before this helper existed.
+const empKey = (emp) => String(emp?.empId ?? emp?.id ?? '');
+
 // ─── Avatar ──────────────────────────────────────────────────────────────────
 const Avatar = ({ name, size = 36, color = '#4f46e5' }) => {
     const safeName = typeof name === 'string' ? name : '';
@@ -165,7 +176,14 @@ const ProjectCard = ({ project, tasks = [], employees, onAddTask, onUpdateTaskSt
     const isProjectLead = memberObj?.role?.toLowerCase()?.includes('lead') || canCreateProject;
     const canManageTasks = canCreateProject || isProjectLead;
 
-    const getEmpName = (id) => employees.find(e => e.id === parseInt(id))?.name || id;
+    const getEmpName = (id) => employees.find(e => empKey(e) === String(id))?.name || id;
+
+    // Team members whose stored id still resolves to a real, current employee.
+    // Anything else is a stale reference (saved before employee ids were
+    // unified) that would otherwise render as a permanent, unresolvable "?".
+    const validMembers = (project.teamMembers || []).filter(m =>
+        employees.some(e => empKey(e) === String(m.id))
+    );
 
     return (
         <div style={{
@@ -245,19 +263,23 @@ const ProjectCard = ({ project, tasks = [], employees, onAddTask, onUpdateTaskSt
 
                 {/* Meta row */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                    {/* Team avatars */}
+                    {/* Team avatars — only render members that still resolve to a real,
+                        current employee. Stale ids (saved before employee ids were
+                        unified to empId) render as an unhelpful "?" forever otherwise;
+                        just hide them here. Opening Edit Project once permanently
+                        drops them from the stored data (see openEditModal). */}
                     <div style={{ display: 'flex' }}>
-                        {(project.teamMembers || []).slice(0, 5).map((m, i) => (
+                        {validMembers.slice(0, 5).map((m, i) => (
                             <div key={m.id} title={getEmpName(m.id)} style={{ marginLeft: i === 0 ? 0 : -8, zIndex: 10 - i }}>
                                 <Avatar name={getEmpName(m.id)} size={28} color={teamColors[i % teamColors.length]} />
                             </div>
                         ))}
-                        {(project.teamMembers?.length || 0) > 5 && (
+                        {validMembers.length > 5 && (
                             <div style={{
                                 width: 28, height: 28, borderRadius: '50%', marginLeft: -8,
                                 background: 'var(--surface-soft)', color: 'var(--text-muted)', fontSize: 10, fontWeight: 700,
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            }}>+{project.teamMembers.length - 5}</div>
+                            }}>+{validMembers.length - 5}</div>
                         )}
                     </div>
                     {/* Deadline */}
@@ -475,10 +497,10 @@ const EmployeePicker = ({ candidates, selectedIds, onToggle, emptyMessage }) => 
             <p style={{ fontSize: 12, color: '#f59e0b', margin: 0, textAlign: 'center', padding: 10 }}>{emptyMessage}</p>
         ) : (
             candidates.map((emp, i) => {
-                const isSelected = selectedIds.includes(String(emp.id));
+                const isSelected = selectedIds.includes(empKey(emp));
                 const color = ['#4f46e5','#7c3aed','#10b981','#f59e0b','#ef4444','#06b6d4'][i % 6];
                 return (
-                    <div key={emp.id} onClick={() => onToggle(emp.id)} style={{
+                    <div key={emp.id} onClick={() => onToggle(empKey(emp))} style={{
                         display: 'flex', alignItems: 'center', gap: 10,
                         padding: '8px 10px', borderRadius: 8, cursor: 'pointer',
                         border: `1.5px solid ${isSelected ? '#4f46e5' : 'transparent'}`,
@@ -649,12 +671,21 @@ const ProjectManagement = () => {
 
     const openEditModal = (project) => {
         setEditingProject(project);
+        const rawMembers = project.teamMembers ? project.teamMembers.map(m => ({ ...m })) : [];
+        // Drop team members that no longer resolve to any current employee
+        // (stale ids left over from before employee identifiers were unified
+        // to empId). Only prune once `employees` has actually loaded — never
+        // silently wipe valid members just because the list is still in
+        // flight. Saving this form afterward persists the cleaned list.
+        const cleanedMembers = employees.length > 0
+            ? rawMembers.filter(m => employees.some(e => empKey(e) === String(m.id)))
+            : rawMembers;
         setEForm({
             title: project.title || '',
             description: project.description || '',
             deadline: project.deadline || '',
             techStack: project.techStack || '',
-            teamMembers: project.teamMembers ? project.teamMembers.map(m => ({ ...m })) : [],
+            teamMembers: cleanedMembers,
         });
         setEditModal(true);
     };
@@ -747,7 +778,7 @@ const ProjectManagement = () => {
         }
         setSubmitting(true);
 
-        const assignedEmps = employees.filter(emp => tForm.assignedTo.includes(String(emp.id)));
+        const assignedEmps = employees.filter(emp => tForm.assignedTo.includes(empKey(emp)));
         const assignedToNames = assignedEmps.map(e => e.name).join(', ');
 
         try {
@@ -847,7 +878,7 @@ const ProjectManagement = () => {
         }
         setSubmitting(true);
 
-        const assignedEmps = employees.filter(emp => teForm.assignedTo.includes(String(emp.id)));
+        const assignedEmps = employees.filter(emp => teForm.assignedTo.includes(empKey(emp)));
         const assignedToNames = assignedEmps.map(e => e.name).join(', ');
         const taskId = editingTask.id || editingTask._id;
 
@@ -953,10 +984,10 @@ const ProjectManagement = () => {
 
     // Employees already on the target project's team — used by both Assign Task and Edit Task modals
     const projectTeamEmployees = employees.filter(emp =>
-        targetProject?.teamMembers?.some(m => String(m.id) === String(emp.id))
+        targetProject?.teamMembers?.some(m => String(m.id) === empKey(emp))
     ).map(emp => ({
         ...emp,
-        role: targetProject?.teamMembers?.find(m => String(m.id) === String(emp.id))?.role,
+        role: targetProject?.teamMembers?.find(m => String(m.id) === empKey(emp))?.role,
     }));
 
     return (
@@ -1122,10 +1153,10 @@ const ProjectManagement = () => {
                                 <>
                                     {employees.length > 0 && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted, #6b7280)', margin: '5px 0 2px 4px' }}>EMPLOYEES</div>}
                                     {employees.map((emp, i) => {
-                                        const selected = pForm.teamMembers.find(m => String(m.id) === String(emp.id));
+                                        const selected = pForm.teamMembers.find(m => String(m.id) === empKey(emp));
                                         const color = ['#4f46e5','#7c3aed','#10b981','#f59e0b','#ef4444','#06b6d4'][i % 6];
                                         return (
-                                            <div key={emp.id} onClick={() => toggleMember(emp.id)} style={{
+                                            <div key={emp.id} onClick={() => toggleMember(empKey(emp))} style={{
                                                 display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
                                                 border: `1.5px solid ${selected ? '#4f46e5' : 'var(--border-color, rgba(0,0,0,0.07))'}`,
                                                 background: selected ? 'rgba(79,70,229,0.06)' : 'transparent', transition: 'all 0.15s',
@@ -1140,7 +1171,7 @@ const ProjectManagement = () => {
                                                         onClick={e => e.stopPropagation()}
                                                         onChange={e => {
                                                             const role = e.target.value;
-                                                            setPForm(prev => ({ ...prev, teamMembers: prev.teamMembers.map(m => String(m.id) === String(emp.id) ? { ...m, role } : m) }));
+                                                            setPForm(prev => ({ ...prev, teamMembers: prev.teamMembers.map(m => String(m.id) === empKey(emp) ? { ...m, role } : m) }));
                                                         }}
                                                         style={{ ...inputStyle, width: 120, padding: '6px 10px', fontSize: 12, margin: 0 }}
                                                     />
@@ -1207,10 +1238,10 @@ const ProjectManagement = () => {
                                 <>
                                     {employees.length > 0 && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted, #6b7280)', margin: '5px 0 2px 4px' }}>EMPLOYEES</div>}
                                     {employees.map((emp, i) => {
-                                        const selected = eForm.teamMembers.find(m => String(m.id) === String(emp.id));
+                                        const selected = eForm.teamMembers.find(m => String(m.id) === empKey(emp));
                                         const color = ['#4f46e5','#7c3aed','#10b981','#f59e0b','#ef4444','#06b6d4'][i % 6];
                                         return (
-                                            <div key={emp.id} onClick={() => toggleEditMember(emp.id)} style={{
+                                            <div key={emp.id} onClick={() => toggleEditMember(empKey(emp))} style={{
                                                 display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
                                                 border: `1.5px solid ${selected ? '#4f46e5' : 'var(--border-color, rgba(0,0,0,0.07))'}`,
                                                 background: selected ? 'rgba(79,70,229,0.06)' : 'transparent', transition: 'all 0.15s',
@@ -1225,7 +1256,7 @@ const ProjectManagement = () => {
                                                         onClick={e => e.stopPropagation()}
                                                         onChange={e => {
                                                             const role = e.target.value;
-                                                            setEForm(prev => ({ ...prev, teamMembers: prev.teamMembers.map(m => String(m.id) === String(emp.id) ? { ...m, role } : m) }));
+                                                            setEForm(prev => ({ ...prev, teamMembers: prev.teamMembers.map(m => String(m.id) === empKey(emp) ? { ...m, role } : m) }));
                                                         }}
                                                         style={{ ...inputStyle, width: 120, padding: '6px 10px', fontSize: 12, margin: 0 }}
                                                     />

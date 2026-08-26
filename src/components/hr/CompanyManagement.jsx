@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./CompanyManagement.css";
 import { useAuth } from "../../context/AuthContext";
+import { API_URL } from "../../config";
 
 const CompanyManagement = () => {
   const navigate = useNavigate();
@@ -20,6 +21,42 @@ const CompanyManagement = () => {
   });
   const [editCompanyData, setEditCompanyData] = useState({ id: "", name: "", code: "", location: "" });
   const [newHR, setNewHR] = useState({ name: "", email: "", companyId: "" });
+
+  // Real HR/employee passwords are stripped out of `companies` (that list is
+  // fetched by every logged-in user regardless of role, so passwords can't
+  // safely live there). When viewing a single company's detail page, fetch
+  // its passwords separately from the scoped credentials endpoint — this
+  // should only ever be reachable by that company's own HR/admin.
+  const [companyCreds, setCompanyCreds] = useState(null); // { admin, hrAccounts, employeeAccounts } | null
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadCreds = async () => {
+      if (!selectedCompany) {
+        setCompanyCreds(null);
+        return;
+      }
+      try {
+        const res = await fetch(`${API_URL}/companies/${selectedCompany}/credentials`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setCompanyCreds(data);
+      } catch (err) {
+        console.error("Failed to load company credentials:", err);
+      }
+    };
+
+    loadCreds();
+    return () => { cancelled = true; };
+  }, [selectedCompany]);
+
+  // Lookup maps built from the fetched credentials, keyed by id (as string).
+  const hrPasswordMap = {};
+  (companyCreds?.hrAccounts || []).forEach((hr) => { hrPasswordMap[String(hr.id)] = hr.password; });
+
+  const empPasswordMap = {};
+  (companyCreds?.employeeAccounts || []).forEach((emp) => { empPasswordMap[String(emp.id)] = emp.password; });
 
   // Auto-generate company code
   React.useEffect(() => {
@@ -87,7 +124,7 @@ const CompanyManagement = () => {
     (async () => {
       const codeToSubmit = newCompany.code || `FT${String(companies.length + 1).padStart(3, '0')}`;
       const payload = { ...newCompany, code: codeToSubmit };
-      
+
       const created = await addCompany(payload);
       if (created) {
         setNewCompany({
@@ -173,7 +210,14 @@ const CompanyManagement = () => {
                       <span className="badge bg-light text-dark border">{hr.companyName}</span>
                     </td>
                     <td>{hr.email}</td>
-                    <td><code className="bg-light p-1">{hr.password}</code></td>
+                    <td>
+                      {/* NOTE: this aggregate cross-company table doesn't have
+                          passwords loaded (they're only fetched per-company,
+                          scoped to the credentials endpoint, when you open a
+                          single company's detail view below). Open that
+                          company's detail page to see/copy this password. */}
+                      <span className="text-muted fst-italic">Open company detail to view</span>
+                    </td>
                     <td>
                       <span className={`badge ${hr.status === 'Active' ? 'bg-success' : 'bg-danger'}`}>
                         {hr.status || 'Active'}
@@ -269,6 +313,16 @@ const CompanyManagement = () => {
       setNewHR({ name: "", email: "", companyId: "" });
       setShowAddHR(false);
       alert(`HR account created. Employee ID: ${result.hrAccount.empId} \nPassword: ${result.hrAccount.password}`);
+      // The credentials list is per-company and this modal is only ever
+      // opened for the currently selected company, so refresh it.
+      if (selectedCompany) {
+        try {
+          const res = await fetch(`${API_URL}/companies/${selectedCompany}/credentials`);
+          if (res.ok) setCompanyCreds(await res.json());
+        } catch (err) {
+          console.error("Failed to refresh company credentials:", err);
+        }
+      }
     } else {
       alert("Failed to create HR account.");
     }
@@ -316,6 +370,7 @@ const CompanyManagement = () => {
   };
 
   const handleCopyPassword = (password) => {
+    if (!password) return;
     navigator.clipboard.writeText(password);
     alert("Password copied to clipboard!");
   };
@@ -452,47 +507,51 @@ const CompanyManagement = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {(company.hrAccounts || []).filter(h => h.empId && String(h.empId).startsWith('HR-')).map((hr) => (
-                    <tr key={hr.id}>
-                      <td className="fw-bold">{hr.name}</td>
-                      <td>{hr.email}</td>
-                      <td>{hr.empId}</td>
-                      <td>
-                        <div className="d-flex gap-2">
-                          <code className="bg-light p-2 rounded">
-                            {hr.password}
-                          </code>
-                          <button
-                            onClick={() => handleCopyPassword(hr.password)}
-                            className="btn btn-sm btn-primary"
-                            title="Copy password"
+                  {(company.hrAccounts || []).filter(h => h.empId && String(h.empId).startsWith('HR-')).map((hr) => {
+                    const pwd = hrPasswordMap[String(hr.id)] ?? null;
+                    return (
+                      <tr key={hr.id}>
+                        <td className="fw-bold">{hr.name}</td>
+                        <td>{hr.email}</td>
+                        <td>{hr.empId}</td>
+                        <td>
+                          <div className="d-flex gap-2">
+                            <code className="bg-light p-2 rounded">
+                              {pwd || 'Loading…'}
+                            </code>
+                            <button
+                              onClick={() => handleCopyPassword(pwd)}
+                              className="btn btn-sm btn-primary"
+                              title="Copy password"
+                              disabled={!pwd}
+                            >
+                              <i className="bi bi-files"></i>
+                            </button>
+                          </div>
+                        </td>
+                        <td>
+                          <select
+                            className={`form-select form-select-sm ${hr.status === 'Active' ? 'text-success' : 'text-danger'}`}
+                            value={hr.status}
+                            onChange={(e) => updateHRStatus(company.id, hr.id, e.target.value)}
+                            style={{ width: '110px', fontWeight: 'bold' }}
                           >
-                            <i className="bi bi-files"></i>
+                            <option value="Active" className="text-success">Active</option>
+                            <option value="Inactive" className="text-danger">Inactive</option>
+                          </select>
+                        </td>
+                        <td>{hr.createdDate}</td>
+                        <td>
+                          <button
+                            onClick={() => handleDeleteHR(company.id, hr.id)}
+                            className="btn btn-sm btn-danger"
+                          >
+                            <i className="bi bi-trash"></i> Remove
                           </button>
-                        </div>
-                      </td>
-                      <td>
-                        <select
-                          className={`form-select form-select-sm ${hr.status === 'Active' ? 'text-success' : 'text-danger'}`}
-                          value={hr.status}
-                          onChange={(e) => updateHRStatus(company.id, hr.id, e.target.value)}
-                          style={{ width: '110px', fontWeight: 'bold' }}
-                        >
-                          <option value="Active" className="text-success">Active</option>
-                          <option value="Inactive" className="text-danger">Inactive</option>
-                        </select>
-                      </td>
-                      <td>{hr.createdDate}</td>
-                      <td>
-                        <button
-                          onClick={() => handleDeleteHR(company.id, hr.id)}
-                          className="btn btn-sm btn-danger"
-                        >
-                          <i className="bi bi-trash"></i> Remove
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
               {(!company.hrAccounts || company.hrAccounts.length === 0) && (
@@ -517,6 +576,7 @@ const CompanyManagement = () => {
                     <th>Name</th>
                     <th>Email</th>
                     <th>Employee ID</th>
+                    <th>Password</th>
                     <th>Role</th>
                     <th>Status</th>
                     <th>Joining Date</th>
@@ -524,22 +584,40 @@ const CompanyManagement = () => {
                 </thead>
                 <tbody>
                   {(company.employeeAccounts || []).length > 0 ? (
-                    (company.employeeAccounts || []).map((emp) => (
-                      <tr key={emp.id}>
-                        <td className="fw-bold">{emp.name}</td>
-                        <td>{emp.email}</td>
-                        <td>{emp.empId}</td>
-                        <td><span className="badge bg-secondary">{emp.employeeType || emp.role || 'Employee'}</span></td>
-                        <td>
-                          <span className={`badge ${emp.status === 'Active' ? 'bg-success' : 'bg-secondary'}`}>
-                            {emp.status || 'Active'}
-                          </span>
-                        </td>
-                        <td>{emp.joiningDate || "N/A"}</td>
-                      </tr>
-                    ))
+                    (company.employeeAccounts || []).map((emp) => {
+                      const pwd = empPasswordMap[String(emp.id)] ?? null;
+                      return (
+                        <tr key={emp.id}>
+                          <td className="fw-bold">{emp.name}</td>
+                          <td>{emp.email}</td>
+                          <td>{emp.empId}</td>
+                          <td>
+                            <div className="d-flex gap-2">
+                              <code className="bg-light p-2 rounded">
+                                {pwd || 'Loading…'}
+                              </code>
+                              <button
+                                onClick={() => handleCopyPassword(pwd)}
+                                className="btn btn-sm btn-primary"
+                                title="Copy password"
+                                disabled={!pwd}
+                              >
+                                <i className="bi bi-files"></i>
+                              </button>
+                            </div>
+                          </td>
+                          <td><span className="badge bg-secondary">{emp.employeeType || emp.role || 'Employee'}</span></td>
+                          <td>
+                            <span className={`badge ${emp.status === 'Active' ? 'bg-success' : 'bg-secondary'}`}>
+                              {emp.status || 'Active'}
+                            </span>
+                          </td>
+                          <td>{emp.joiningDate || "N/A"}</td>
+                        </tr>
+                      );
+                    })
                   ) : (
-                    <tr><td colSpan="6" className="text-center py-4 text-muted">No employees found.</td></tr>
+                    <tr><td colSpan="7" className="text-center py-4 text-muted">No employees found.</td></tr>
                   )}
                 </tbody>
               </table>

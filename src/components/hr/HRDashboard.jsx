@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useTheme } from "../../context/ThemeContext.jsx";
+import { API_URL } from "../../config";
 import {
   FaUserPlus,
   FaSearch,
@@ -25,7 +26,7 @@ import LiveMonitoring from "./LiveMonitoring";
 const HRDashboard = () => {
   const { user, companies, addEmployeeToCompany, removeEmployeeFromCompany } = useAuth();
   const { theme } = useTheme();
-  
+
   const [showAddEmployee, setShowAddEmployee] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newEmployee, setNewEmployee] = useState({
@@ -38,6 +39,33 @@ const HRDashboard = () => {
   });
   const [successModal, setSuccessModal] = useState({ isOpen: false, title: "", message: "", subMessage: null });
 
+  // Real passwords are NOT included in `companies` (that list is fetched by
+  // every logged-in user, of any role, so passwords are stripped from it
+  // server-side). This dashboard fetches them separately from the scoped
+  // credentials endpoint, which only HR/admin should ever call.
+  // Map shape: { [employeeId]: password }
+  const [credentials, setCredentials] = useState({});
+
+  const loadCredentials = useCallback(async () => {
+    if (!user?.companyId) return;
+    try {
+      const res = await fetch(`${API_URL}/companies/${user.companyId}/credentials`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const map = {};
+      (data.employeeAccounts || []).forEach((emp) => {
+        map[String(emp.id)] = emp.password;
+      });
+      setCredentials(map);
+    } catch (err) {
+      console.error("Failed to load employee credentials:", err);
+    }
+  }, [user?.companyId]);
+
+  useEffect(() => {
+    loadCredentials();
+  }, [loadCredentials]);
+
   const company = companies.find((c) => c.id === user?.companyId);
 
   if (!company) {
@@ -48,14 +76,20 @@ const HRDashboard = () => {
     );
   }
 
+  // Resolve the real password for an employee row: prefer the freshly-fetched
+  // credentials map, fall back to whatever's on the employee object itself
+  // (e.g. a brand-new employee just created this session, before the next
+  // credentials refresh completes).
+  const getPassword = (employee) => credentials[String(employee.id)] ?? employee.password ?? null;
+
   const handleAddEmployee = async (e) => {
     e.preventDefault();
-    
+
     if (!newEmployee.name || !newEmployee.email || !newEmployee.employeeType) {
       alert("Please fill all required fields");
       return;
     }
-    
+
     setIsSubmitting(true);
     try {
       const result = await addEmployeeToCompany(user.companyId, {
@@ -74,7 +108,7 @@ const HRDashboard = () => {
       } else if (result && result.employeeAccount) {
         setNewEmployee({ name: "", email: "", employeeType: "office", role: "employee", shiftStartTime: "09:00", shiftEndTime: "18:00" });
         setShowAddEmployee(false);
-        
+
         setSuccessModal({
           isOpen: true,
           title: "Employee Created!",
@@ -88,6 +122,10 @@ const HRDashboard = () => {
             </div>
           )
         });
+
+        // Refresh the credentials map so the new employee's password shows
+        // up in the table immediately, without waiting for a full page reload.
+        loadCredentials();
       } else {
         alert("Failed to create employee.");
       }
@@ -112,6 +150,7 @@ const HRDashboard = () => {
   };
 
   const handleCopyPassword = (password) => {
+    if (!password) return;
     navigator.clipboard.writeText(password);
     alert("Password copied to clipboard!");
   };
@@ -274,19 +313,19 @@ const HRDashboard = () => {
 
       {/* Premium Scrollable Add Employee Modal */}
       {showAddEmployee && (
-        <div 
-          className="modal fade show d-block" 
-          tabIndex="-1" 
+        <div
+          className="modal fade show d-block"
+          tabIndex="-1"
           role="dialog"
-          style={{ 
-            backgroundColor: 'rgba(0, 0, 0, 0.6)', 
+          style={{
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
             backdropFilter: 'blur(4px)',
-            zIndex: 1050 
+            zIndex: 1050
           }}
           onClick={handleCancelAdd}
         >
-          <div 
-            className="modal-dialog modal-dialog-centered modal-dialog-scrollable" 
+          <div
+            className="modal-dialog modal-dialog-centered modal-dialog-scrollable"
             role="document"
             onClick={(e) => e.stopPropagation()}
             style={{ maxWidth: '600px' }}
@@ -303,7 +342,7 @@ const HRDashboard = () => {
                   aria-label="Close"
                 ></button>
               </div>
-              
+
               <form onSubmit={handleAddEmployee}>
                 <div className="modal-body px-4 py-4" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
                   <div className="row g-3">
@@ -377,7 +416,7 @@ const HRDashboard = () => {
                       />
                     </div>
                   </div>
-                  
+
                   <div className="alert border-0 rounded-3 p-3 d-flex align-items-start gap-3 mt-4 mb-0" style={{ backgroundColor: 'rgba(99, 102, 241, 0.1)', color: 'var(--primary, #4f46e5)' }}>
                     <FaInfoCircle className="mt-1 flex-shrink-0" size={16} />
                     <div className="small" style={{ fontSize: '0.85rem' }}>
@@ -396,8 +435,8 @@ const HRDashboard = () => {
                   >
                     Cancel
                   </button>
-                  <button 
-                    type="submit" 
+                  <button
+                    type="submit"
                     className="btn btn-primary px-4 py-2 rounded-3 shadow-sm fw-semibold d-flex align-items-center gap-2"
                     style={{ fontSize: '0.9rem' }}
                     disabled={isSubmitting}
@@ -444,52 +483,56 @@ const HRDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {(company.employeeAccounts || []).map((employee) => (
-                  <tr key={employee.id} style={{ borderBottomColor: 'var(--border-color)' }}>
-                    <td className="px-4 py-3 align-middle fw-medium">{employee.name}</td>
-                    <td className="px-4 py-3 align-middle">{employee.email}</td>
-                    <td className="px-4 py-3 align-middle text-muted" style={{ color: 'var(--text-muted)' }}>{employee.empId}</td>
-                    <td className="px-4 py-3 align-middle">{getEmployeeTypeBadge(employee.employeeType)}</td>
-                    <td className="px-4 py-3 align-middle">
-                      <div className="d-flex gap-2 align-items-center">
-                        <code className="px-2 py-1 rounded" style={{ backgroundColor: 'var(--bg-main)', color: 'var(--danger)' }}>
-                          {employee.password}
-                        </code>
+                {(company.employeeAccounts || []).map((employee) => {
+                  const pwd = getPassword(employee);
+                  return (
+                    <tr key={employee.id} style={{ borderBottomColor: 'var(--border-color)' }}>
+                      <td className="px-4 py-3 align-middle fw-medium">{employee.name}</td>
+                      <td className="px-4 py-3 align-middle">{employee.email}</td>
+                      <td className="px-4 py-3 align-middle text-muted" style={{ color: 'var(--text-muted)' }}>{employee.empId}</td>
+                      <td className="px-4 py-3 align-middle">{getEmployeeTypeBadge(employee.employeeType)}</td>
+                      <td className="px-4 py-3 align-middle">
+                        <div className="d-flex gap-2 align-items-center">
+                          <code className="px-2 py-1 rounded" style={{ backgroundColor: 'var(--bg-main)', color: 'var(--danger)' }}>
+                            {pwd || 'Loading…'}
+                          </code>
+                          <button
+                            onClick={() => handleCopyPassword(pwd)}
+                            className="btn btn-sm btn-link text-muted p-0"
+                            title="Copy password"
+                            disabled={!pwd}
+                            style={{ color: 'var(--text-muted)', textDecoration: 'none' }}
+                          >
+                            <FaCopy />
+                          </button>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 align-middle">
+                        <span className={`badge ${employee.status === 'Inactive' ? 'bg-danger' : 'bg-success'} text-white px-3 py-2 rounded-pill fw-normal`}>
+                          {employee.status || 'Active'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 align-middle">
                         <button
-                          onClick={() => handleCopyPassword(employee.password)}
-                          className="btn btn-sm btn-link text-muted p-0"
-                          title="Copy password"
-                          style={{ color: 'var(--text-muted)', textDecoration: 'none' }}
+                          onClick={() => handleDeleteEmployee(employee.id)}
+                          className="btn btn-link d-flex align-items-center justify-content-center mx-auto"
+                          title="Remove Employee"
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            padding: 0,
+                            cursor: 'pointer',
+                            transition: 'transform 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                         >
-                          <FaCopy />
+                          <FaTrash size={22} style={{ color: '#ef4444' }} />
                         </button>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 align-middle">
-                      <span className={`badge ${employee.status === 'Inactive' ? 'bg-danger' : 'bg-success'} text-white px-3 py-2 rounded-pill fw-normal`}>
-                        {employee.status || 'Active'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 align-middle">
-                      <button
-                        onClick={() => handleDeleteEmployee(employee.id)}
-                        className="btn btn-link d-flex align-items-center justify-content-center mx-auto"
-                        title="Remove Employee"
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          padding: 0,
-                          cursor: 'pointer',
-                          transition: 'transform 0.2s ease'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
-                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                      >
-                        <FaTrash size={22} style={{ color: '#ef4444' }} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
             {(company.employeeAccounts || []).length === 0 && !showAddEmployee && (
