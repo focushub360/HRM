@@ -36,6 +36,38 @@ const MyAttendance = () => {
 
     const [attendanceHistory, setAttendanceHistory] = useState([]);
 
+    // Which month's attendance is currently being viewed, as a 'YYYY-MM'
+    // key. The "month" dropdown used to be non-functional — a single
+    // hardcoded option showing the current month's name, with no onChange
+    // and no way to actually pick a different month — and calculateStats()
+    // itself hardcoded `new Date().getMonth()`, so History could never show
+    // anything but the current month regardless of the dropdown. This state
+    // plus the derived list below makes the dropdown real.
+    const [selectedMonthKey, setSelectedMonthKey] = useState(() => {
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    });
+
+    // Every month that actually has activity for this user, newest first,
+    // always including the current month even if it has no entries yet.
+    const availableMonths = useMemo(() => {
+        const keys = new Set();
+        const now = new Date();
+        keys.add(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
+        (activityLog || []).forEach((log) => {
+            if (log.userId !== user?.empId) return;
+            const d = new Date(log.timestamp);
+            if (Number.isNaN(d.getTime())) return;
+            keys.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+        });
+        return Array.from(keys).sort().reverse();
+    }, [activityLog, user]);
+
+    const formatMonthLabel = (key) => {
+        const [y, m] = key.split('-').map(Number);
+        return new Date(y, m - 1, 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+    };
+
     // 1. Clock & Auto-Reset Logic (11 PM)
     useEffect(() => {
         const timer = setInterval(() => {
@@ -235,10 +267,27 @@ const MyAttendance = () => {
         let watchId;
         let timeoutId;
         let bestPosition = null;
+        // GUARD: navigator.geolocation.watchPosition can deliver more than
+        // one position update in very quick succession (sometimes within
+        // the same tick), and clearWatch() doesn't retroactively cancel a
+        // callback that already started running. Without this flag, two
+        // GPS fixes arriving a couple of seconds apart could both pass the
+        // accuracy<=20 check and both call onSuccess — which for
+        // check-in/check-out means logActivity firing twice for a single
+        // tap, producing duplicate CHECK_IN/CHECK_OUT rows a few seconds
+        // apart in Activity Reports. Only the first resolution is honored.
+        let settled = false;
 
         const cleanup = () => {
             if (watchId) navigator.geolocation.clearWatch(watchId);
             if (timeoutId) clearTimeout(timeoutId);
+        };
+
+        const resolveOnce = (pos) => {
+            if (settled) return;
+            settled = true;
+            cleanup();
+            onSuccess(pos);
         };
 
         const onPosition = (pos) => {
@@ -249,12 +298,13 @@ const MyAttendance = () => {
             }
             // If GPS is warmed up and very accurate (< 20m), stop immediately
             if (pos.coords.accuracy <= 20) {
-                cleanup();
-                onSuccess(pos);
+                resolveOnce(pos);
             }
         };
 
         const onTimeout = () => {
+            if (settled) return;
+            settled = true;
             cleanup();
             if (bestPosition) {
                 console.log("Location timeout. Using best available position:", bestPosition.coords.accuracy + "m");
@@ -384,6 +434,18 @@ const MyAttendance = () => {
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
+    // Live "Xh Ym" duration string for the currently open session, used both
+    // for the on-screen "Hrs" tile and passed down to the checkout modal so
+    // the Daily Work Report actually carries a duration instead of ''.
+    const liveSessionDuration = useMemo(() => {
+        if (!isCheckedIn || !checkInTime) return '';
+        const diff = currentTime - checkInTime;
+        if (diff <= 0) return '';
+        const h = Math.floor(diff / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        return `${h}h ${m}m`;
+    }, [isCheckedIn, checkInTime, currentTime]);
+
     // Render Content based on Tab
     const renderContent = () => {
         switch (activeTab) {
@@ -447,12 +509,7 @@ const MyAttendance = () => {
                                         <div className="col-4">
                                             <div className="p-2 bg-light border rounded">
                                                 <div className="text-primary fw-bold">
-                                                    {isCheckedIn ? (() => {
-                                                        const diff = currentTime - checkInTime;
-                                                        const h = Math.floor(diff / 3600000);
-                                                        const m = Math.floor((diff % 3600000) / 60000);
-                                                        return `${h}h ${m}m`;
-                                                    })() : "--"}
+                                                    {isCheckedIn ? liveSessionDuration : "--"}
                                                 </div>
                                                 <div className="text-muted" style={{ fontSize: '0.7rem' }}>Hrs</div>
                                             </div>
@@ -641,6 +698,7 @@ const MyAttendance = () => {
                 onConfirmCheckout={() => handleCheckOut(false)}
                 checkInTime={checkInTime}
                 locationAddress={locationAddress}
+                sessionDuration={liveSessionDuration}
             />
         </div>
     );

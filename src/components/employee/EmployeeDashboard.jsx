@@ -29,6 +29,14 @@ const EmployeeDashboard = () => {
   const [lastActivityTime, setLastActivityTime] = useState(null);
   const [sessionDuration, setSessionDuration] = useState("00:00:00");
   const [showDailyWorkModal, setShowDailyWorkModal] = useState(false);
+  // GUARD against duplicate CHECK_IN/CHECK_OUT log entries: neither button
+  // had any disabled/loading state before, so a double-tap while waiting on
+  // GPS would fire handleCheckIn/handleCheckOut twice, each independently
+  // completing and logging its own activity — producing two entries a
+  // couple of seconds apart (matches the "duplicate check-in" reports).
+  // This flag both disables the buttons visually and short-circuits any
+  // re-entrant call while a lookup is already in flight.
+  const [locating, setLocating] = useState(false);
 
   // Stats
   const [stats, setStats] = useState({
@@ -248,8 +256,72 @@ const EmployeeDashboard = () => {
     }
   };
 
+  // Precise-location helper matching MyAttendance.jsx's behavior: it tries
+  // to get an accurate GPS fix, but if that fails or times out for ANY
+  // reason (permission hiccup, no GPS chip, indoors, slow warm-up) it falls
+  // back to a default position instead of blocking the action outright.
+  // The previous version here used the browser's getCurrentPosition with
+  // no fallback at all, so any failure — even a harmless timeout — hard
+  // blocked Check In/Check Out with a generic "accurate location required"
+  // alert, while MyAttendance.jsx (using this same pattern) never blocked.
+  const getPreciseLocation = (onSuccess, onError) => {
+    if (!navigator.geolocation) {
+      onError("Geolocation is not supported by this browser.");
+      return;
+    }
+
+    let watchId;
+    let timeoutId;
+    let bestPosition = null;
+    let settled = false;
+
+    const cleanup = () => {
+      if (watchId) navigator.geolocation.clearWatch(watchId);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+
+    const resolveOnce = (pos) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      onSuccess(pos);
+    };
+
+    const onPosition = (pos) => {
+      if (!bestPosition || pos.coords.accuracy < bestPosition.coords.accuracy) {
+        bestPosition = pos;
+      }
+      if (pos.coords.accuracy <= 20) {
+        resolveOnce(pos);
+      }
+    };
+
+    const onTimeout = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      if (bestPosition) {
+        onSuccess(bestPosition);
+      } else {
+        onError("Unable to retrieve location. Please check your GPS signal.");
+      }
+    };
+
+    watchId = navigator.geolocation.watchPosition(onPosition, (err) => console.warn(err), {
+      enableHighAccuracy: true,
+      maximumAge: 0,
+      timeout: 10000
+    });
+
+    timeoutId = setTimeout(onTimeout, 6000);
+  };
+
   // 4. Actions
   const handleCheckIn = () => {
+    // Ignore re-entrant calls (e.g. a double-tap) while a lookup is already
+    // in flight — without this, two independent CHECK_IN logs get created.
+    if (locating) return;
+
     // Daily Limit Check
     const todayStr = new Date().toDateString();
     const todayActivity = activityLog?.filter(log =>
@@ -288,49 +360,46 @@ const EmployeeDashboard = () => {
       alert("You have Checked In! Work timer started.");
     };
 
-    if (!navigator.geolocation) {
-      alert("Geolocation is not supported by your browser. Accurate location is required to Check In.");
-      return;
-    }
+    const defaultPos = { coords: { latitude: 12.9165, longitude: 79.1325 } };
 
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude, longitude } = pos.coords;
-        const address = await fetchAddress(latitude, longitude);
-        processCheckIn(latitude, longitude, address);
-      },
+    const proceedCheckIn = async (pos) => {
+      const { latitude, longitude } = pos.coords;
+      const address = await fetchAddress(latitude, longitude);
+      processCheckIn(latitude, longitude, address);
+      setLocating(false);
+    };
+
+    setLocating(true);
+    getPreciseLocation(
+      (pos) => proceedCheckIn(pos),
       (err) => {
-        console.warn("Location access denied or failed.", err);
-        alert("Please allow location access to Check In. Accurate location is strictly required.");
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        console.warn("Location failed, using default:", err);
+        proceedCheckIn(defaultPos);
+      }
     );
   };
 
   const handleCheckOut = (auto = false) => {
-    const processLogoutWithPos = async (pos) => {
+    // Same re-entrancy guard as handleCheckIn, so a double-tap on the
+    // checkout confirmation can't produce two CHECK_OUT logs either.
+    if (locating) return;
+
+    const defaultPos = { coords: { latitude: 12.9165, longitude: 79.1325 } };
+
+    const proceedCheckOut = async (pos) => {
       const { latitude, longitude } = pos.coords;
       const address = await fetchAddress(latitude, longitude);
       processCheckOut(auto, { latitude, longitude, address });
+      setLocating(false);
     };
 
-    if (!navigator.geolocation) {
-      alert("Geolocation is not supported by your browser. Accurate location is required to Check Out.");
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => processLogoutWithPos(pos),
+    setLocating(true);
+    getPreciseLocation(
+      (pos) => proceedCheckOut(pos),
       (err) => {
-        console.error("Logout location unavailable:", err);
-        if (auto) {
-          // If auto check-out (e.g. system generated at midnight), bypass strict location check
-          processCheckOut(true, { latitude: 0, longitude: 0, address: "System Auto-Checkout" });
-        } else {
-          alert("Please allow location access to Check Out. Accurate location is strictly required.");
-        }
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        console.warn("Logout location failed or timed out, using default:", err);
+        proceedCheckOut(defaultPos);
+      }
     );
   };
 
@@ -577,8 +646,8 @@ const EmployeeDashboard = () => {
         </div>
         <div className="d-flex gap-2">
           {!hasCheckedInToday && !hasCheckedOutToday && (
-            <button className="btn btn-success px-4 py-2" onClick={handleCheckIn}>
-              <i className="bi bi-play-circle me-2"></i> CHECK IN
+            <button className="btn btn-success px-4 py-2" onClick={handleCheckIn} disabled={locating}>
+              {locating ? <><span className="spinner-border spinner-border-sm me-2"></span>Locating...</> : <><i className="bi bi-play-circle me-2"></i> CHECK IN</>}
             </button>
           )}
           {hasCheckedInToday && !hasCheckedOutToday && !isOnBreak && (
@@ -592,8 +661,8 @@ const EmployeeDashboard = () => {
             </button>
           )}
           {hasCheckedInToday && !hasCheckedOutToday && !isOnBreak && (
-            <button className="btn btn-danger px-4 py-2" onClick={() => setShowDailyWorkModal(true)}>
-              <i className="bi bi-stop-circle me-2"></i> CHECK OUT
+            <button className="btn btn-danger px-4 py-2" onClick={() => setShowDailyWorkModal(true)} disabled={locating}>
+              {locating ? <><span className="spinner-border spinner-border-sm me-2"></span>Locating...</> : <><i className="bi bi-stop-circle me-2"></i> CHECK OUT</>}
             </button>
           )}
           {hasCheckedOutToday && (
@@ -607,7 +676,7 @@ const EmployeeDashboard = () => {
       {/* Inactivity Warning */}
       {inactivityWarning && isCheckedIn && (
         <div className="alert alert-warning alert-dismissible fade show mb-4" role="alert" style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.2)', color: 'var(--warning)' }}>
-          <strong>âš ï¸ Inactivity Alert!</strong> You have been inactive. HR has been notified.
+          <strong>⚠️ Inactivity Alert!</strong> You have been inactive. HR has been notified.
           <button type="button" className="btn-close" onClick={() => setInactivityWarning(false)}></button>
         </div>
       )}
@@ -1177,4 +1246,3 @@ const EmployeeDashboard = () => {
 };
 
 export default EmployeeDashboard;
-

@@ -15,7 +15,10 @@ const ActivityReports = () => {
     return local.toISOString().split("T")[0];
   };
 
-  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
+  // Empty = show all-time data by default (so older Daily Work Reports and
+  // activity logs aren't hidden the moment HR opens this page). HR can still
+  // narrow down to a specific month with the month picker below.
+  const [selectedMonth, setSelectedMonth] = useState("");
   const [activityLogs, setActivityLogs] = useState([]);
   const [dailyWorkReports, setDailyWorkReports] = useState([]);
   const [employeeTypeFilter, setEmployeeTypeFilter] = useState('all');
@@ -119,7 +122,7 @@ const ActivityReports = () => {
   const filteredDailyWorkReports = useMemo(() => {
     return dailyWorkReports.filter(report => {
       const reportDate = report.date;
-      const dateMatch = !selectedMonth || reportDate.startsWith(selectedMonth);
+      const dateMatch = !selectedMonth || (reportDate && reportDate.startsWith(selectedMonth));
       const empMatch = employeeFilter === 'all' || report.userId === employeeFilter;
       const searchMatch = !searchQuery ||
         (report.userName && report.userName.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -274,6 +277,15 @@ const ActivityReports = () => {
   }, [location.search]);
 
   const handleViewChange = (view) => {
+    // Returning to the overview should always show all employees again.
+    // Without this, clicking "Reports"/"Logs" on one employee's row leaves
+    // employeeFilter scoped to just that person, so navigating back to the
+    // dashboard silently keeps showing their (often sparse/zero) numbers
+    // instead of the full picture — looking exactly like data got wiped,
+    // when really it just needs a filter reset, not a page refresh.
+    if (view === 'dashboard') {
+      setEmployeeFilter('all');
+    }
     setCurrentView(view);
   };
 
@@ -295,7 +307,7 @@ const ActivityReports = () => {
                 <div>
                   <h6 className="text-uppercase fw-bold text-muted small mb-1">Employee Logins</h6>
                   <h3 className="fw-bold mb-0 text-primary">
-                    {filteredLogs.filter(l => (l.action === 'LOGIN' || l.action === 'LOGOUT') && l.userId?.startsWith('EMP-')).length}
+                    {filteredLogs.filter(l => LOGIN_HISTORY_ACTIONS.includes(l.action) && l.userId?.startsWith('EMP-')).length}
                   </h3>
                 </div>
                 <div className="p-2 rounded-circle" style={{ backgroundColor: 'rgba(99, 102, 241, 0.1)' }}>
@@ -323,7 +335,7 @@ const ActivityReports = () => {
                 <div>
                   <h6 className="text-uppercase fw-bold text-muted small mb-1">System Events</h6>
                   <h3 className="fw-bold mb-0 text-success">
-                    {filteredLogs.filter(l => ['CHECK_IN', 'CHECK_OUT', 'LOCATION_UPDATE'].includes(l.action)).length}
+                    {filteredLogs.filter(l => ['CHECK_IN', 'CHECK_OUT', 'AUTO_CHECK_OUT', 'LOCATION_UPDATE'].includes(l.action)).length}
                   </h3>
                 </div>
                 <div className="p-2 rounded-circle" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)' }}>
@@ -618,13 +630,20 @@ const ActivityReports = () => {
     </div>
   );
 
+  // Treated as login-equivalent for the Login/Logout History table.
+  // SESSION_START fires whenever someone opens the app with an already
+  // persisted session (no fresh credentials typed that day) — without it
+  // here, days where someone was clearly active (visible in System Events /
+  // Daily Work Reports) can show zero entries in this table.
+  const LOGIN_HISTORY_ACTIONS = ['LOGIN', 'LOGOUT', 'SESSION_START'];
+
   const renderLoginTable = () => (
     <div className="card shadow-sm border-0" style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', borderRadius: '14px' }}>
       <div className="card-header border-bottom py-3 d-flex justify-content-between align-items-center" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)' }}>
         <h5 className="mb-0 fw-bold" style={{ color: 'var(--primary)' }}><i className="bi bi-person-check me-2"></i>Login / Logout History</h5>
         <div className="d-flex gap-2 align-items-center">
           <span className="badge bg-primary-subtle text-primary border border-primary px-3">
-            {filteredLogs.filter(l => (l.action === 'LOGIN' || l.action === 'LOGOUT') && l.userId?.startsWith('EMP-')).length} Records
+            {filteredLogs.filter(l => LOGIN_HISTORY_ACTIONS.includes(l.action) && l.userId?.startsWith('EMP-')).length} Records
           </span>
           <button className="btn btn-sm btn-outline-success" onClick={handleExportCSV}>
             <i className="bi bi-download me-1"></i> Export
@@ -645,7 +664,7 @@ const ActivityReports = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredLogs.filter(l => (l.action === 'LOGIN' || l.action === 'LOGOUT') && l.userId?.startsWith('EMP-')).map(log => (
+              {filteredLogs.filter(l => LOGIN_HISTORY_ACTIONS.includes(l.action) && l.userId?.startsWith('EMP-')).map(log => (
                 <tr key={log.id} style={{ borderBottomColor: 'var(--border-color)' }}>
                   <td className="ps-4">
                     <div className="fw-bold" style={{ color: 'var(--text-main)' }}>{log.userName}</div>
@@ -660,9 +679,9 @@ const ActivityReports = () => {
                     )}
                   </td>
                   <td>
-                    {log.action === "LOGIN" ?
-                      <span className="badge bg-success text-white">LOGIN</span> :
-                      <span className="badge bg-danger text-white">LOGOUT</span>}
+                    {log.action === "LOGIN" && <span className="badge bg-success text-white">LOGIN</span>}
+                    {log.action === "SESSION_START" && <span className="badge bg-success text-white" title="Resumed an already-active session">SESSION START</span>}
+                    {log.action === "LOGOUT" && <span className="badge bg-danger text-white">LOGOUT</span>}
                   </td>
                   <td>{new Date(log.timestamp).toLocaleTimeString()} <small className="ms-1" style={{ color: 'var(--text-muted)' }}>{new Date(log.timestamp).toLocaleDateString()}</small></td>
                   <td className="text-end pe-4">
@@ -670,7 +689,7 @@ const ActivityReports = () => {
                   </td>
                 </tr>
               ))}
-              {filteredLogs.filter(l => (l.action === 'LOGIN' || l.action === 'LOGOUT') && l.userId?.startsWith('EMP-')).length === 0 && (
+              {filteredLogs.filter(l => LOGIN_HISTORY_ACTIONS.includes(l.action) && l.userId?.startsWith('EMP-')).length === 0 && (
                 <tr><td colSpan="6" className="text-center py-4 text-muted">No login activity found.</td></tr>
               )}
             </tbody>
@@ -698,39 +717,38 @@ const ActivityReports = () => {
               <tr>
                 <th className="py-3 ps-4" style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-muted)' }}>Employee</th>
                 <th style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-muted)' }}>Action</th>
-                <th style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-muted)' }}>Details</th>
-                <th style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-muted)' }}>Location</th>
+                <th style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-muted)' }}>Details & Location</th>
                 <th style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-muted)' }}>Timestamp</th>
                 <th className="text-end pe-4" style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-muted)' }}>Manage</th>
               </tr>
             </thead>
             <tbody>
-              {filteredLogs.filter(l => ['CHECK_IN', 'CHECK_OUT', 'LOCATION_UPDATE'].includes(l.action)).map(log => (
+              {filteredLogs.filter(l => ['CHECK_IN', 'CHECK_OUT', 'AUTO_CHECK_OUT', 'LOCATION_UPDATE'].includes(l.action)).map(log => (
                 <tr key={log.id} style={{ borderBottomColor: 'var(--border-color)' }}>
                   <td className="ps-4">
                     <div className="fw-bold" style={{ color: 'var(--text-main)' }}>{log.userName}</div>
                   </td>
                   <td>
-                    {log.action === "CHECK_IN" && <span className="badge bg-primary">CHECK IN</span>}
-                    {log.action === "CHECK_OUT" && <span className="badge bg-dark">CHECK OUT</span>}
+                    {log.action === "CHECK_IN" && <span className="badge bg-success">CHECK IN</span>}
+                    {(log.action === "CHECK_OUT" || log.action === "AUTO_CHECK_OUT") && <span className="badge bg-danger">{log.action === "AUTO_CHECK_OUT" ? "AUTO CHECK OUT" : "CHECK OUT"}</span>}
                     {log.action === "LOCATION_UPDATE" && <span className="badge bg-warning text-dark">LOCATION</span>}
                   </td>
-                  <td className="small" style={{ color: 'var(--text-muted)' }}>{log.details || '-'}</td>
-                  <td>
+                  <td className="small" style={{ color: 'var(--text-muted)', maxWidth: 360 }}>
+                    <div>{log.details || '-'}</div>
                     {log.latitude ? (
-                      <a href={`https://www.google.com/maps?q=${log.latitude},${log.longitude}`} target="_blank" rel="noreferrer" className="text-decoration-none">
-                        <i className="bi bi-geo-alt-fill text-danger"></i> View
+                      <a href={`https://www.google.com/maps?q=${log.latitude},${log.longitude}`} target="_blank" rel="noreferrer" className="d-inline-flex align-items-center gap-1 mt-1 text-decoration-none">
+                        <i className="bi bi-geo-alt-fill text-danger"></i> View Location
                       </a>
-                    ) : '-'}
+                    ) : null}
                   </td>
-                  <td>{new Date(log.timestamp).toLocaleTimeString()}</td>
+                  <td>{new Date(log.timestamp).toLocaleTimeString()} <small className="ms-1" style={{ color: 'var(--text-muted)' }}>{new Date(log.timestamp).toLocaleDateString()}</small></td>
                   <td className="text-end pe-4">
                     <button className="btn btn-link text-danger p-0" onClick={() => handleDeleteActivity(log.id)}><i className="bi bi-trash"></i></button>
                   </td>
                 </tr>
               ))}
-              {filteredLogs.filter(l => ['CHECK_IN', 'CHECK_OUT', 'LOCATION_UPDATE'].includes(l.action)).length === 0 && (
-                <tr><td colSpan="6" className="text-center py-4 text-muted">No system events found.</td></tr>
+              {filteredLogs.filter(l => ['CHECK_IN', 'CHECK_OUT', 'AUTO_CHECK_OUT', 'LOCATION_UPDATE'].includes(l.action)).length === 0 && (
+                <tr><td colSpan="5" className="text-center py-4 text-muted">No system events found.</td></tr>
               )}
             </tbody>
           </table>
@@ -753,6 +771,7 @@ const ActivityReports = () => {
                 <th className="ps-4" style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-muted)' }}>Employee</th>
                 <th style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-muted)' }}>Type</th>
                 <th style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-muted)' }}>Duration (Idle)</th>
+                <th style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-muted)' }}>Date</th>
                 <th style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-muted)' }}>Timestamp</th>
                 <th style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-muted)' }}>Details</th>
               </tr>
@@ -764,12 +783,13 @@ const ActivityReports = () => {
                     <td className="ps-4 fw-bold" style={{ color: 'var(--text-main)' }}>{alert.userName}</td>
                     <td><span className="badge bg-secondary">{alert.employeeType}</span></td>
                     <td className="text-danger fw-bold">{Math.floor(alert.duration / 1000)} sec</td>
+                    <td style={{ color: 'var(--text-muted)' }}>{new Date(alert.timestamp).toLocaleDateString()}</td>
                     <td style={{ color: 'var(--text-muted)' }}>{new Date(alert.timestamp).toLocaleTimeString()}</td>
                     <td className="small" style={{ color: 'var(--text-muted)' }}>{alert.details}</td>
                   </tr>
                 ))
               ) : (
-                <tr><td colSpan="5" className="text-center py-4 text-muted">No inactivity alerts.</td></tr>
+                <tr><td colSpan="6" className="text-center py-4 text-muted">No inactivity alerts.</td></tr>
               )}
             </tbody>
           </table>
@@ -863,16 +883,18 @@ const ActivityReports = () => {
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
             style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', borderColor: 'var(--border-color)', maxWidth: '150px' }}
+            title={selectedMonth ? `Showing ${selectedMonth}` : 'Showing all time — pick a month to narrow down'}
           />
 
           {/* Reset Filters */}
-          {(employeeFilter !== 'all' || employeeTypeFilter !== 'all' || searchQuery !== '') && (
+          {(employeeFilter !== 'all' || employeeTypeFilter !== 'all' || searchQuery !== '' || selectedMonth !== '') && (
             <button
               className="btn btn-outline-danger btn-sm"
               onClick={() => {
                 setEmployeeFilter('all');
                 setEmployeeTypeFilter('all');
                 setSearchQuery('');
+                setSelectedMonth('');
               }}
               title="Reset Filters"
             >
@@ -894,5 +916,3 @@ const ActivityReports = () => {
 };
 
 export default ActivityReports;
-
-

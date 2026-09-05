@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext.jsx';
 
 const DailyWorkCheckoutModal = ({ isOpen, onClose, onConfirmCheckout, sessionDuration, checkInTime, locationAddress }) => {
   const { user, submitDailyWorkReport } = useAuth();
+  const { theme } = useTheme();
 
   const getTodayFormatted = () => {
     return new Date().toLocaleDateString('en-US', {
@@ -202,14 +204,14 @@ const DailyWorkCheckoutModal = ({ isOpen, onClose, onConfirmCheckout, sessionDur
           {/* Warning Banner */}
           <div
             style={{
-              backgroundColor: 'rgba(234, 88, 12, 0.12)',
+              backgroundColor: theme === 'dark' ? 'rgba(234, 88, 12, 0.18)' : 'rgba(234, 88, 12, 0.12)',
               border: '1px solid rgba(234, 88, 12, 0.4)',
               borderRadius: '10px',
               padding: '12px 16px',
               display: 'flex',
               alignItems: 'center',
               gap: '12px',
-              color: '#fdba74',
+              color: theme === 'dark' ? '#fdba74' : '#9a3412',
               fontSize: '0.86rem',
               marginBottom: '20px'
             }}

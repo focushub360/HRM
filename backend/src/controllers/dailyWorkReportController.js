@@ -1,6 +1,22 @@
 import DailyWorkReport from '../models/DailyWorkReport.js';
 import ActivityLog from '../models/ActivityLog.js';
 
+// Mongo does exact BSON-type equality. companyId is stored as `Mixed`, so it
+// keeps whatever JS type it was saved with (this app treats company IDs as
+// numbers almost everywhere — e.g. `c.id === parseInt(user.companyId)`).
+// req.query values, on the other hand, are ALWAYS strings. A raw
+// `{ companyId: req.query.companyId }` query will therefore silently match
+// zero documents whenever the saved value is a number, even though the
+// report was saved successfully. Build a query that matches either shape.
+const buildFlexibleIdMatch = (value) => {
+  if (value === undefined || value === null || value === '') return undefined;
+  const asNumber = Number(value);
+  if (!Number.isNaN(asNumber) && String(asNumber) === String(value).trim()) {
+    return { $in: [value, asNumber] };
+  }
+  return value;
+};
+
 export const submitDailyWorkReport = async (req, res) => {
   try {
     const { userId, userName, companyId, date, formattedDate, tasks, generalNotes, checkInTime, checkOutTime, totalSessionDuration, locationAddress } = req.body;
@@ -11,10 +27,12 @@ export const submitDailyWorkReport = async (req, res) => {
 
     const todayDate = date || new Date().toISOString().split('T')[0];
 
-    // Find existing report for this employee on this date or create new
+    // Find existing report for this employee on this date or create new.
+    // Use the same flexible match here too, in case userId/companyId ever
+    // arrive with inconsistent types across requests (e.g. a stale client).
     let report = await DailyWorkReport.findOne({
       userId,
-      companyId,
+      companyId: buildFlexibleIdMatch(companyId),
       date: todayDate
     });
 
@@ -72,7 +90,8 @@ export const getDailyWorkReports = async (req, res) => {
     const { companyId, date, userId, month } = req.query;
     const query = {};
 
-    if (companyId) query.companyId = companyId;
+    const flexibleCompanyId = buildFlexibleIdMatch(companyId);
+    if (flexibleCompanyId !== undefined) query.companyId = flexibleCompanyId;
     if (userId) query.userId = userId;
     if (date) query.date = date;
     else if (month) {
