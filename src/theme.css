@@ -1,8 +1,8 @@
 ﻿/* Minimal shared theme system */
 
 :root {
-  --bg-main: #f7f9fc;
-  --bg-gradient: linear-gradient(180deg, #f7f9fc 0%, #eef3f8 100%);
+  --bg-main: #ffffff;
+  --bg-gradient: linear-gradient(180deg, #ffffff 0%, #ffffff 100%);
   --text-main: #172033;
   --text-muted: #5b6980;
   --text-inverse: #ffffff;
@@ -33,18 +33,18 @@
 }
 
 [data-theme='dark'] {
-  --bg-main: #0f172a;
-  --bg-gradient: linear-gradient(180deg, #0f172a 0%, #111827 100%);
+  --bg-main: linear-gradient(135deg, #2a52be 0%, #17306e 100%);
+  --bg-gradient: linear-gradient(135deg, #2a52be 0%, #17306e 100%);
   --text-main: #ffffff;
   --text-muted: #cbd5e1;
   --text-inverse: #0f172a;
-  --surface: #111827;
-  --surface-soft: #0b1220;
+  --surface: #102553;
+  --surface-soft: #133780;
   --border-color: #243244;
-  --glass-bg: #111827;
+  --glass-bg: #171d2b;
   --glass-border: 1px solid #243244;
   --glass-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
-  --bg-card: #111827;
+  --bg-card: #081f52;
   --accent: #818cf8;
   --accent-soft: rgba(129, 140, 248, 0.18);
   --input-bg: #0f172a;
@@ -53,6 +53,7 @@
 body {
   margin: 0;
   background: var(--bg-main);
+  background-attachment: fixed;
   color: var(--text-main) !important;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   line-height: 1.55;

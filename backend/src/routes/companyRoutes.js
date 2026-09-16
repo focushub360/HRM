@@ -7,6 +7,8 @@ import {
   deleteCompany,
   getCompanyCredentials,
   updateCompanySettings,
+  getFeatureSettings,
+  updateFeatureSettings,
   updateCompanyAdmin
 } from '../controllers/companyController.js';
 import { getEmployeesByCompany, addEmployeeToCompany, removeEmployeeFromCompany, updateEmployeeInCompany } from '../controllers/employeeController.js';
@@ -20,6 +22,8 @@ const router = Router();
 router.route('/').get(getCompanies).post(createCompany);
 router.route('/:id').get(getCompanyById).put(updateCompany).delete(deleteCompany);
 router.put('/:id/settings', updateCompanySettings);
+// Admin Settings -> Application Settings (per-company feature toggles)
+router.route('/:id/feature-settings').get(getFeatureSettings).put(updateFeatureSettings);
 router.put('/:companyId/admin', updateCompanyAdmin);
 router.get('/:companyId/credentials', getCompanyCredentials);
 

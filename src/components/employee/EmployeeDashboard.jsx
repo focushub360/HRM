@@ -13,7 +13,14 @@ import {
 } from 'recharts';
 
 const EmployeeDashboard = () => {
-  const { user, logout, logActivity, notifyInactivityAlert, activityLog } = useAuth();
+  const { user, logout, logActivity, notifyInactivityAlert, activityLog, isFeatureEnabled } = useAuth();
+
+  // COMPANY FEATURE TOGGLES (Admin Settings -> Application Settings):
+  // Read once per render - if this company has turned a toggle OFF, the
+  // check-in/out flow below skips that requirement entirely for every
+  // employee in this company.
+  const locationRequired = isFeatureEnabled('attendanceLocationEnabled');
+  const cameraRequired = isFeatureEnabled('attendanceCameraEnabled');
   const navigate = useNavigate();
 
   // State
@@ -369,6 +376,15 @@ const EmployeeDashboard = () => {
       setLocating(false);
     };
 
+    // COMPANY FEATURE TOGGLE: attendanceLocationEnabled
+    // If this company has Location tracking switched OFF in Admin
+    // Settings -> Application Settings, skip the GPS lookup completely
+    // and check the employee in immediately with no coordinates.
+    if (!locationRequired) {
+      processCheckIn(null, null, "Location Tracking Disabled for this Company");
+      return;
+    }
+
     setLocating(true);
     getPreciseLocation(
       (pos) => proceedCheckIn(pos),
@@ -392,6 +408,14 @@ const EmployeeDashboard = () => {
       processCheckOut(auto, { latitude, longitude, address });
       setLocating(false);
     };
+
+    // COMPANY FEATURE TOGGLE: attendanceLocationEnabled
+    // Same as Check In - skip the GPS lookup entirely when this company
+    // doesn't require location tracking.
+    if (!locationRequired) {
+      processCheckOut(auto, { latitude: null, longitude: null, address: "Location Tracking Disabled for this Company" });
+      return;
+    }
 
     setLocating(true);
     getPreciseLocation(
@@ -681,8 +705,11 @@ const EmployeeDashboard = () => {
         </div>
       )}
 
-      {/* AI Proctoring / Webcam Monitor */}
-      {isCheckedIn && (
+      {/* AI Proctoring / Webcam Monitor.
+          COMPANY FEATURE TOGGLE: attendanceCameraEnabled - only mount the
+          webcam/proctoring widget when this company requires camera
+          verification. Off = never asks the employee for camera access. */}
+      {isCheckedIn && cameraRequired && (
         <WebcamMonitor />
       )}
 

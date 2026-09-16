@@ -33,7 +33,7 @@ import "/src/App.css";
 const SideBar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout, hasPermission, leaveRequests, notifications, chatUnreadCount } = useAuth();
+  const { user, logout, hasPermission, leaveRequests, notifications, chatUnreadCount, isFeatureEnabled } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
   // State for sidebar visibility
@@ -96,7 +96,31 @@ const SideBar = () => {
     }
 
     if (!item.permission) return true;
-    return hasPermission(item.permission);
+    if (!hasPermission(item.permission)) return false;
+
+    // -----------------------------------------------------------------
+    // COMPANY FEATURE TOGGLES (Admin Settings -> Application Settings)
+    // -----------------------------------------------------------------
+    // Even if the user's ROLE has permission for a module, the company
+    // itself may have switched that module OFF for everyone (HR +
+    // employees). Map each nav path to its matching toggle key and hide
+    // it here when disabled. Paths not listed below have no toggle and
+    // always show (Dashboard, Employees, Leave Management, Payroll,
+    // Analytics, Activity Reports, My Attendance, Profile, Settings,
+    // Company Management, etc. - see ApplicationSettings.jsx for why).
+    const featureTogglePathMap = {
+      '/chat': 'chatEnabled',
+      '/hr/projects': 'taskManagementEnabled',
+      '/hr/live-tracking': 'liveTrackingEnabled',
+      '/recognition': 'recognitionEnabled',
+      '/feed': 'feedEnabled',
+      '/event': 'eventsEnabled',
+      '/sales/dashboard': 'salesModuleEnabled'
+    };
+    const toggleKey = featureTogglePathMap[item.path];
+    if (toggleKey && !isFeatureEnabled(toggleKey)) return false;
+
+    return true;
   });
 
   const handleLogout = () => {

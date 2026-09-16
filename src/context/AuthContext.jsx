@@ -801,6 +801,60 @@ export const AuthProvider = ({ children }) => {
     }
   }, [isAuthenticated, user]);
 
+  // ---------------------------------------------------------------------
+  // FEATURE TOGGLES (Admin Settings -> Application Settings)
+  // ---------------------------------------------------------------------
+  // Reads a company's per-feature ON/OFF flag out of the `companies` list
+  // that's already loaded in this context. This is what every screen
+  // (SideBar, Chat, Project Management, check-in flow, etc.) should call
+  // before rendering/allowing a toggle-gated feature - see
+  // ApplicationSettings.jsx for the full list of keys and the admin UI
+  // that flips them.
+  //
+  // Defaults to `true` (enabled) whenever the company or the specific key
+  // isn't found, so a company created before this feature existed keeps
+  // behaving exactly like it did before - nothing breaks silently.
+  const isFeatureEnabled = (featureKey, companyId = user?.companyId) => {
+    if (!companyId) return true;
+    const company = companies.find((c) => String(c.id) === String(companyId));
+    if (!company || !company.featureSettings) return true;
+    const value = company.featureSettings[featureKey];
+    return value === undefined ? true : !!value;
+  };
+
+  // Saves a partial (or full) feature-settings object for one company.
+  // Hits the dedicated /feature-settings endpoint (PUT, dot-notation
+  // merge on the backend) rather than the generic /settings endpoint, so
+  // toggles you don't touch are never accidentally wiped out.
+  const updateFeatureSettings = async (companyId, featureSettings) => {
+    try {
+      const response = await fetch(`${API_URL}/companies/${companyId}/feature-settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(featureSettings),
+      });
+
+      if (!response.ok) throw new Error('Failed to update feature settings');
+
+      const updatedFeatureSettings = await response.json();
+
+      // Merge the fresh flags into local state so every screen re-renders
+      // immediately (no page refresh needed).
+      setCompanies((prev) =>
+        prev.map((c) =>
+          String(c.id) === String(companyId)
+            ? { ...c, featureSettings: { ...(c.featureSettings || {}), ...updatedFeatureSettings } }
+            : c
+        )
+      );
+
+      return updatedFeatureSettings;
+    } catch (error) {
+      console.error('Error updating feature settings:', error);
+      return null;
+    }
+  };
+
   const hasPermission = (permission) => {
     if (!user) return false;
 
@@ -902,6 +956,8 @@ export const AuthProvider = ({ children }) => {
     user,
     isAuthenticated,
     hasPermission,
+    isFeatureEnabled,
+    updateFeatureSettings,
     socket,
     companies,
     activityLog,

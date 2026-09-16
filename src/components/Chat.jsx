@@ -1411,6 +1411,22 @@ const Chat = () => {
 
   const isTeamAdmin = activeTeam ? activeTeam.createdBy === currentUserId || (activeTeam.admins || []).includes(currentUserId) : false;
 
+  // COMPANY FEATURE TOGGLE: chatEnabled (Admin Settings -> Application
+  // Settings). SideBar.jsx already hides the "Chat" nav link when this is
+  // OFF, but this guard blocks direct URL access (e.g. someone typing
+  // /chat straight into the address bar) too. All hooks above have
+  // already run, so this early return is safe (Rules of Hooks).
+  const chatModuleEnabled = companies.find((c) => String(c.id) === String(user?.companyId))?.featureSettings?.chatEnabled !== false;
+  if (!chatModuleEnabled) {
+    return (
+      <div className="container-fluid py-5 text-center" style={{ color: "var(--text-main)" }}>
+        <i className="bi bi-chat-dots fs-1 text-muted d-block mb-3"></i>
+        <h4>Chat is not enabled for your company</h4>
+        <p className="text-muted">Please contact your Company Admin if you believe this is a mistake.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="container-fluid py-3" style={{ color: "var(--text-main)", height: "calc(100vh - 85px)", display: "flex", flexDirection: "column", minHeight: 0 }}>
       <div className="d-flex justify-content-between align-items-center mb-3 flex-shrink-0">

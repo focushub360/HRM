@@ -7,6 +7,7 @@ import { useAuth } from "./context/AuthContext.jsx";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "/src/App.css";
 import loginLogo from "./assets/Logo.png";
+import loginLogoDark from "./assets/Logo_Dark.png";
 
 import CompanySpecificDashboard from "./components/hr/CompanySpecificDashboard.jsx";
 import Event2 from "./components/Events2";
@@ -49,7 +50,7 @@ const ProjectManagement = React.lazy(() => import("./components/hr/ProjectManage
 
 function App() {
   try {
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, isFeatureEnabled } = useAuth();
 
     if (!isAuthenticated) {
       return (
@@ -63,8 +64,13 @@ function App() {
       <ThemeProvider>
         <div className="d-flex w-100 h-100" style={{ flex: 1, overflow: "hidden" }}>
           <ActivityTracker />
-          <FaceProctoring />
-          <LiveGPSTracker />
+          {/* COMPANY FEATURE TOGGLES (Admin Settings -> Application Settings):
+              Only mount the camera-based proctoring / GPS trackers when this
+              company has that toggle switched ON. When OFF, these components
+              never mount, so the browser never even asks for camera/location
+              permission for that company's users. */}
+          {isFeatureEnabled('attendanceCameraEnabled') && <FaceProctoring />}
+          {isFeatureEnabled('attendanceLocationEnabled') && <LiveGPSTracker />}
           <Sidebar />
           <ErrorBoundary>
             <MainContentWrapper />
@@ -112,7 +118,11 @@ function MainContentWrapper() {
       {!isFullScreenPage && (
         <div className="global-header shadow-sm">
           <div className="header-left">
-            <img src={loginLogo} alt="Focus Engineering" className="header-brand-logo" />
+            {/* Logo.png has dark navy "FOCUS ENGINEERING" text baked into the
+                image (for light backgrounds); Logo_Dark.png has light text
+                baked in (for dark backgrounds). Swap based on theme so the
+                text is never invisible against the navbar. */}
+            <img src={theme === 'dark' ? loginLogoDark : loginLogo} alt="Focus Engineering" className="header-brand-logo" />
           </div>
         </div>
       )}

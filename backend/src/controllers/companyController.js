@@ -136,6 +136,56 @@ export const updateCompanySettings = asyncHandler(async (req, res) => {
   res.json(sanitizeCompany(updated));
 });
 
+// GET /api/companies/:id/feature-settings
+// Returns just the feature-toggle block for a company (Admin Settings ->
+// Application Settings tab reads from here). Falls back to schema
+// defaults (all true) if the company predates this feature.
+export const getFeatureSettings = asyncHandler(async (req, res) => {
+  const company = await Company.findOne({ id: Number(req.params.id) }).lean();
+  if (!company) return res.status(404).json({ error: 'Company not found' });
+  res.json(company.featureSettings || {});
+});
+
+// PUT /api/companies/:id/feature-settings
+// Body: { attendanceLocationEnabled, attendanceCameraEnabled, chatEnabled,
+//         taskManagementEnabled, liveTrackingEnabled, recognitionEnabled,
+//         feedEnabled, eventsEnabled, salesModuleEnabled }
+// Uses dot-notation $set so a PARTIAL body only touches the keys sent in,
+// instead of the generic /settings route's blind top-level $set (which
+// would wipe out any featureSettings keys not included in the request).
+export const updateFeatureSettings = asyncHandler(async (req, res) => {
+  const allowedKeys = [
+    'attendanceLocationEnabled',
+    'attendanceCameraEnabled',
+    'chatEnabled',
+    'taskManagementEnabled',
+    'liveTrackingEnabled',
+    'recognitionEnabled',
+    'feedEnabled',
+    'eventsEnabled',
+    'salesModuleEnabled'
+  ];
+
+  const setPayload = {};
+  for (const key of allowedKeys) {
+    if (Object.prototype.hasOwnProperty.call(req.body, key)) {
+      setPayload[`featureSettings.${key}`] = !!req.body[key];
+    }
+  }
+
+  if (Object.keys(setPayload).length === 0) {
+    return res.status(400).json({ error: 'No valid feature settings provided' });
+  }
+
+  const updated = await Company.findOneAndUpdate(
+    { id: Number(req.params.id) },
+    { $set: setPayload },
+    { new: true }
+  ).lean();
+  if (!updated) return res.status(404).json({ error: 'Company not found' });
+  res.json(updated.featureSettings || {});
+});
+
 // PUT /api/companies/:companyId/admin
 export const updateCompanyAdmin = asyncHandler(async (req, res) => {
   const company = await Company.findOne({ id: Number(req.params.companyId) });

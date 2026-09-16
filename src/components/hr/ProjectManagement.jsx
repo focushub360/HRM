@@ -990,6 +990,22 @@ const ProjectManagement = () => {
         role: targetProject?.teamMembers?.find(m => String(m.id) === empKey(emp))?.role,
     }));
 
+    // COMPANY FEATURE TOGGLE: taskManagementEnabled (Admin Settings ->
+    // Application Settings). SideBar.jsx already hides the "Project
+    // Management" nav link when this is OFF, but this guard blocks direct
+    // URL access (e.g. /hr/projects typed into the address bar) too. All
+    // hooks above have already run, so this early return is safe.
+    const taskModuleEnabled = companies.find((c) => String(c.id) === String(user?.companyId))?.featureSettings?.taskManagementEnabled !== false;
+    if (!taskModuleEnabled) {
+        return (
+            <div className="container-fluid py-5 text-center" style={{ color: "var(--text-main)" }}>
+                <i className="bi bi-kanban fs-1 text-muted d-block mb-3"></i>
+                <h4>Task Management is not enabled for your company</h4>
+                <p className="text-muted">Please contact your Company Admin if you believe this is a mistake.</p>
+            </div>
+        );
+    }
+
     return (
         <>
             <style>{`

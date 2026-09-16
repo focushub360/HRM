@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useTheme } from '../context/ThemeContext.jsx';
 import ChangePasswordModal from './common/ChangePasswordModal';
+import CompanySelectDropdown from './common/CompanySelectDropdown.jsx';
+import ApplicationSettings from './hr/ApplicationSettings.jsx';
 
 const Settings = () => {
     const { user, updateCompany, companies } = useAuth();
@@ -153,18 +155,12 @@ const Settings = () => {
                 {isAdmin && (
                     <div className="d-flex align-items-center gap-3">
                         <span className="text-muted fw-bold">Configuring:</span>
-                        <select
-                            className="form-select border-secondary"
-                            style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-main)', width: '250px', cursor: 'pointer' }}
+                        {/* Custom themed dropdown - shows company NAME only, no ID */}
+                        <CompanySelectDropdown
+                            companies={companies}
                             value={selectedCompanyId}
-                            onChange={(e) => setSelectedCompanyId(e.target.value)}
-                        >
-                            {companies.map(c => (
-                                <option key={c.id} value={c.id}>
-                                    {c.name} (ID: {c.id})
-                                </option>
-                            ))}
-                        </select>
+                            onChange={setSelectedCompanyId}
+                        />
                     </div>
                 )}
             </div>
@@ -184,6 +180,7 @@ const Settings = () => {
                             {renderTabNav('general', 'General', 'bi-sliders')}
                             {isAdmin && renderTabNav('company', 'Company Profile', 'bi-building')}
                             {isAdmin && renderTabNav('attendance', 'Attendance & Shifts', 'bi-clock-history')}
+                            {isAdmin && renderTabNav('application', 'Application Settings', 'bi-toggles')}
                             {isAdmin && renderTabNav('leaves', 'Leave Policies', 'bi-calendar-check')}
                             {isAdmin && renderTabNav('security', 'Security & Credentials', 'bi-shield-lock')}
                         </div>
@@ -343,6 +340,11 @@ const Settings = () => {
                                         <button className="btn btn-primary" onClick={handleSaveCompany}>Save Configuration</button>
                                     </div>
                                 </div>
+                            )}
+
+                            {/* APPLICATION SETTINGS TAB - all feature toggles live in ApplicationSettings.jsx */}
+                            {activeTab === 'application' && (
+                                <ApplicationSettings companyId={selectedCompanyId} />
                             )}
 
                             {/* LEAVES TAB */}
